@@ -1,7 +1,0 @@
-{
-    "products_ddb_table" : "test_products",
-    "users_ddb_table": "test_users",
-    "login_secret_key": "sfb45534FDSdfg545",
-    "aws_region": "us-east-1"
-
-}
