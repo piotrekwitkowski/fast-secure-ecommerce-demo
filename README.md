@@ -16,8 +16,9 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 | **Web Scraping** | Fetch home page using curl with browser User-Agent | Update the CloudFront domain name in the following curl, then execute it in bash, and verify that a 202 challenge is returned to force the acquisition of a token: <br/> ```for i in {1..30}; do curl -I --include --silent https://xxxxxxxx.cloudfront.net/ -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' \| grep -e HTTP/ -e x-amzn-waf-action; done``` <br/> Load the page using another browser to see the silent challenge in action|
 | **Web Scraping (TBD)** | Fetch home page using curl with browser User-Agent and valid token | Update the CloudFront domain name in the following curl, and replace the cookie with a valid token value from a sucessful browser session, then execute it in AWS Cloud Shell in different refions, and verify that a 202 challenge is returned to force the acquisition of a token: <br/> ```curl -I --include --silent https://xxxxxxxx.cloudfront.net/ -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' -H 'Cookie: aws-waf-token=yyyyyyyyyyyyy'```|
 | **Web Scraping** | Automation framework detection | Launch a headless chrome using Selenium using the following command, and make sure that the scraper is not able to parse product pages: <br/> ```node selenium.js https://xxxxxxxx.cloudfront.net/```|
+| **Distributed Denial of Service (DDoS)** | Malicious IPs | Load the website using a VPN https://www.blockaway.net/, and verify that the page do not load|
 
-
+https://www.blockaway.net/
 
 
 # troubleshooting commands
