@@ -18,7 +18,7 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 | **Web Scraping** | Automation framework detection | Launch a headless chrome using Selenium using the following command, and make sure that the scraper is not able to parse product pages: <br/> ```node selenium.js https://xxxxxxxx.cloudfront.net/```|
 | **DDoS** | Reduce attack surface of apis| Update the CloudFront domain name in the following curl, then execute it in bash, and verify that products api is not exposed on the internet <br/> ```curl  https://xxxxxxxx.cloudfront.net/api/products -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' ``` | 
 | **DDoS** | Malicious IPs | Load the website using a VPN https://www.blockaway.net/, and verify that the page do not load|
-
+| **DDoS** | Rate limit (400/5mins) | Run the following bash script, and check how long it takes AWS WAF to block an IP after limit is breached <br/> ```bash rate-limit-test.sh https://xxxxxxxx.cloudfront.net/hello 400``` |
 
 
 
