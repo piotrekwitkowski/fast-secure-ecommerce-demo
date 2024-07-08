@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { isLoggedIn, logout, getUsername } from '../../utils/auth';
+import Script from 'next/script'
+import config from '../../aws-backend-config.json';
 
 
 export default function Layout({ children }) {
@@ -52,6 +54,7 @@ export default function Layout({ children }) {
         </div>
       </nav>
       <main className="max-w-6xl mx-auto mt-6 px-4">{children}</main>
+      <Script src={config.waf_url} strategy="beforeInteractive" />
     </div>
   );
 }
