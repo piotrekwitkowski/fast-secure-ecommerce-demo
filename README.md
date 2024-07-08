@@ -18,3 +18,5 @@ cat /var/log/cloud-init-output.log
 * Add ico icon
 * Script to generate data and populate the store
 * Managing cart actions
+* Image optimizatino
+* A/B testing  with rule engine
