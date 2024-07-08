@@ -5,6 +5,8 @@ A demo online store for showcasing aws edge services
 
 # WAS WAF testing scenarios
 
+```cd scripts```
+
 | Threat category  | Test scenario  | How to test | 
 |:------------- |:--------------- | :-------------|
 | **Credential Stuffing** | Fetch login api wihtout a token using curl | Update the CloudFront domain name in the following curl, then execute it in bash, and verify that a 403 block is returned: <br/> ```curl -d '{username: "Joe", password: "hackedpwd"}' -H "Content-Type: application/json" -X POST https://xxxxxxxx.cloudfront.net/api/login --include --silent -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' \| grep -e HTTP/ -e x-amzn-waf-action``` |
@@ -13,7 +15,10 @@ A demo online store for showcasing aws edge services
 | **Web Scraping** | Fetch home page using curl | Update the CloudFront domain name in the following curl, then execute it in bash, and verify that a 403 block is returned: <br/> ```curl -I https://xxxxxxxx.cloudfront.net/``` |
 | **Web Scraping** | Fetch home page using curl with browser User-Agent | Update the CloudFront domain name in the following curl, then execute it in bash, and verify that a 202 challenge is returned to force the acquisition of a token: <br/> ```for i in {1..30}; do curl -I --include --silent https://xxxxxxxx.cloudfront.net/ -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' \| grep -e HTTP/ -e x-amzn-waf-action; done``` <br/> Load the page using another browser to see the silent challenge in action|
 | **Web Scraping (TBD)** | Fetch home page using curl with browser User-Agent and valid token | Update the CloudFront domain name in the following curl, and replace the cookie with a valid token value from a sucessful browser session, then execute it in AWS Cloud Shell in different refions, and verify that a 202 challenge is returned to force the acquisition of a token: <br/> ```curl -I --include --silent https://xxxxxxxx.cloudfront.net/ -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' -H 'Cookie: aws-waf-token=yyyyyyyyyyyyy'```|
-| **Web Scraping (TBD)** | Automation framework detection | Update the CloudFront domain name in the following curl, and replace the cookie with a valid token value from a sucessful browser session, then execute it in AWS Cloud Shell in different refions, and verify that a 202 challenge is returned to force the acquisition of a token: <br/> ```curl -I --include --silent https://xxxxxxxx.cloudfront.net/ -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' -H 'Cookie: aws-waf-token=yyyyyyyyyyyyy'```|
+| **Web Scraping** | Automation framework detection | Launch a headless chrome using Selenium using the following command, and make sure that the scraper is not able to parse product pages: <br/> ```node selenium.js https://ddilij7yr8kiv.cloudfront.net/```|
+
+
+
 
 
 
