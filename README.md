@@ -1,5 +1,5 @@
-# recycle-bin-boutique
-demo online store for showcasing aws edge services
+# The Recycle Bin Boutique
+A demo online store for showcasing aws edge services
 
 # scripts
 ```
@@ -10,3 +10,8 @@ pm2 list
 cat /var/log/cloud-init.log and
 cat /var/log/cloud-init-output.log
 ```
+
+# TODO
+* Refactor app code
+* Script to generate data and populate the store
+* Managing cart actions
