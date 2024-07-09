@@ -3,7 +3,7 @@ A demo online store for showcasing aws edge services
 
 ![The Recycle Bin Boutique](screenshot.jpeg)
 
-# WAS WAF testing scenarios
+# AWS WAF testing scenarios
 
 Navigate to scripts folder using the ```cd scripts``` command, then go through the different testing scenarios.
 
