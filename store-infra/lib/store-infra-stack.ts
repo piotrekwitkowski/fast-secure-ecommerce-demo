@@ -56,19 +56,6 @@ const wafDefaultRules = [
                 ]
               }
             },
-            {
-              byteMatchStatement: {
-                fieldToMatch: { uriPath: {} },
-                positionalConstraint: "STARTS_WITH",
-                searchString: "/api/profile",
-                textTransformations: [
-                  {
-                    priority: 0,
-                    type: "LOWERCASE"
-                  }
-                ]
-              }
-            },
           ]
         }
 
@@ -150,6 +137,7 @@ const wafDefaultRules = [
     Rule: {
       name: "MANAGED_general_bot_protection",
       priority: 5,
+      overrideAction: { none: {} },
       statement: {
         managedRuleGroupStatement: {
           vendorName: "AWS",
@@ -161,19 +149,18 @@ const wafDefaultRules = [
           ]
         },
       },
-      overrideAction: { none: {} },
       ruleActionOverrides: [
         {
           actionToUse: {
             block: {}
           },
-          name: 'TGT_TokenReuseIp'
+          name: "TGT_TokenReuseIp"
         },
         {
           actionToUse: {
             catpcha: {}
           },
-          name: 'TGT_ML_CoordinatedActivityHigh'
+          name: "TGT_ML_CoordinatedActivityHigh"
         },
       ],
       visibilityConfig: {
@@ -225,12 +212,24 @@ const wafDefaultRules = [
                       ]
                     }
                   },
-
                   {
                     byteMatchStatement: {
                       fieldToMatch: { uriPath: {} },
                       positionalConstraint: "STARTS_WITH",
                       searchString: "/api/register",
+                      textTransformations: [
+                        {
+                          priority: 0,
+                          type: "LOWERCASE"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    byteMatchStatement: {
+                      fieldToMatch: { uriPath: {} },
+                      positionalConstraint: "STARTS_WITH",
+                      searchString: "/api/profile",
                       textTransformations: [
                         {
                           priority: 0,
