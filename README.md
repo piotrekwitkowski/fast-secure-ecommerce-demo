@@ -23,15 +23,14 @@ It is exposed to the internet using CloudFront, with a WAF WEbACL.
 
 # AWS WAF testing scenarios
 
-Navigate to scripts folder using the ```cd scripts``` command, then go through the different testing scenarios.
+Navigate to scripts folder using the ```cd scripts``` command, then go through the different testing scenarios, and make sure that you replace the CloudFront domain name in the commands with the one in the CDK deployment output.
 
 | Threat category  | Test scenario  | How to test | 
 |:------------- |:--------------- | :-------------|
-| **DDoS** | Reduce attack surface of backend| Go to the deployed EC2 instance (_store_backend_ec2_), and try to load the page on port 3000. Connection will be refused, since only CloudFront IPs are allowed to using CloudFront prefixlist in its security group | 
-| **DDoS** | Reduce attack surface of apis| Some APIs in the backend are only meant to be used by NextJS when rendering the page on the server side. Navigate to one of these APIs (e.g. /api/profile, api/products, api/product) and verify that you are blocked
-Update the CloudFront domain name in the following curl, then execute it in bash, and verify that products api is not exposed on the internet <br/> ```curl  https://xxxxxxxx.cloudfront.net/api/products -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' ``` | 
-| **DDoS** | Malicious IPs | Load the website using a VPN https://www.blockaway.net/, and verify that the page do not load|
-| **DDoS** | Rate limit (400/5mins) | Run the following bash script, and check how long it takes AWS WAF to block an IP after limit is breached <br/> ```bash rate-limit-test.sh https://xxxxxxxx.cloudfront.net/hello 400``` |
+| **DDoS** | Reduce attack surface of backend| Go to the deployed EC2 instance (_store_backend_ec2_), and try to load the page on port 3000. Connection will be refused, since only CloudFront IPs are allowed to using CloudFront prefixlist in its security group. | 
+| **DDoS** | Reduce attack surface of APIs| Some APIs in the backend are only meant to be used by NextJS when rendering the page on the server side. Navigate to one of these APIs (e.g. /api/profile, api/products, api/product) and verify that you are blocked. | 
+| **DDoS** | Malicious IPs | Load the website using a VPN proxy site (e.g. https://www.blockaway.net), and verify that the page is blocked. Note that this might not happen all the time as VPN operators constantly change their IPs.|
+| **DDoS** | Rate limit (400 threshold) | Run the following bash script, and verify how AWS WAF blocks an IP after threshold is breached within tens of seconds <br/> ```bash rate-limit-test.sh https://xxxxxxxx.cloudfront.net/hello 400``` |
 | **Credential Stuffing** | Fetch login api wihtout a token using curl | Update the CloudFront domain name in the following curl, then execute it in bash, and verify that a 403 block is returned: <br/> ```curl -d '{username: "Joe", password: "hackedpwd"}' -H "Content-Type: application/json" -X POST https://xxxxxxxx.cloudfront.net/api/login --include --silent -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' \| grep -e HTTP/ -e x-amzn-waf-action``` |
 | **Credential Stuffing** | Stolen credential detection | Use the following test credentials and verify that the api returns 403 block  <br/> ```WAF_TEST_CREDENTIAL@wafexample.com``` <br/> ```WAF_TEST_CREDENTIAL_PASSWORD``` |
 | **Credential Stuffing** | Password traversal detection | Using the same username, e.g. joe, login with different passwords 10-20 times until the api call returns 403 |
