@@ -384,6 +384,24 @@ const wafDefaultRules = [
       },
     }
   },
+  {
+    Rule: {
+      name: "CUSTOM_block-account-creation-with-medium-volumetricsessionhigh",
+      priority: 10,
+      action: { block: {} },
+      statement: {
+        labelMatchStatement: {
+          scope: 'LABEL',
+          key: 'awswaf:managed:aws:acfp:aggregate:volumetric:session:creation:medium'
+        }
+      },
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: "CUSTOM_block-account-creation-with-medium-volumetricsessionhigh",
+      },
+    },
+  },
 ];
 
 export class StoreInfraStack extends cdk.Stack {
