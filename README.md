@@ -53,6 +53,11 @@ pm2 start npm --name nextjs-app -- run start -- -p 3000
 
 cat /var/log/cloud-init.log and
 cat /var/log/cloud-init-output.log
+
+fields @timestamp, @message
+| sort @timestamp desc
+| filter httpRequest.requestId = ' UW9-AA4dRZVxrLJeVEWIoXt-8mZ98b7gfYH-NhXJhgwIG76HymvrOw=='
+| limit 20
 ```
 
 # TODO / Roadmap
