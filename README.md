@@ -60,6 +60,9 @@ fields @timestamp, @message
 ```
 
 # TODO / Roadmap
+* Fix rules override in WAF
+* Add captcha scenario
+* WAF logging
 * Refactor nextjs app code
 * Refactor infra code
 * Add ico icon
@@ -67,4 +70,3 @@ fields @timestamp, @message
 * Managing cart actions
 * Image optimization
 * A/B testing  with rule engine
-* WAF logging
