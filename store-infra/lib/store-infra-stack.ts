@@ -2,10 +2,12 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as waf from "aws-cdk-lib/aws-wafv2";
+// TODO Refactor cloudfront / s3
 import { AwsCustomResource, PhysicalResourceId, AwsCustomResourcePolicy } from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 
-
+// TODO move to config file
 const GITHUB_REPO = 'https://github.com/achrafsouk/recycle-bin-boutique';
 const SECRET_KEY = 'd34fFWEesds43fsFDsdf';
 const products = [
@@ -18,6 +20,370 @@ const products = [
   { id: 'outdoor-rug-3347438', name: 'Recycled Plastic Outdoor Rug', price: 2.99, image: 'images/outdoor-rug.jpeg', description: 'Stylish and durable rug made from recycled plastic bottles. Perfect for patios and picnics while giving plastic waste a new life.' },
   { id: 'cotton-tote-bag-009833', name: 'Organic Cotton Tote Bag', price: 6.99, image: 'images/cotton-tote-bag.jpeg', description: 'Sturdy, washable shopping bag made from organic cotton. Reduces reliance on disposable bags and supports sustainable agriculture.' },
   { id: 'glass-cleaning-kit-4443', name: 'Refillable Glass Cleaning Kit', price: 0.99, image: 'images/glass-cleaning-kit.jpeg', description: 'All-purpose cleaner in a reusable glass bottle with concentrated refills. Effective cleaning power with less packaging waste.' },
+];
+const wafDefaultRules = [
+  {
+    Rule: {
+      name: "CUSTOM_reduce-surface-attack-apis",
+      priority: 1,
+      action: { block: {} },
+      statement: {
+        orStatement: {
+          statements: [
+            {
+              byteMatchStatement: {
+                fieldToMatch: { uriPath: {} },
+                positionalConstraint: "STARTS_WITH",
+                searchString: "/api/product",
+                textTransformations: [
+                  {
+                    priority: 0,
+                    type: "LOWERCASE"
+                  }
+                ]
+              }
+            },
+            {
+              byteMatchStatement: {
+                fieldToMatch: { uriPath: {} },
+                positionalConstraint: "STARTS_WITH",
+                searchString: "/api/products",
+                textTransformations: [
+                  {
+                    priority: 0,
+                    type: "LOWERCASE"
+                  }
+                ]
+              }
+            },
+            {
+              byteMatchStatement: {
+                fieldToMatch: { uriPath: {} },
+                positionalConstraint: "STARTS_WITH",
+                searchString: "/api/profile",
+                textTransformations: [
+                  {
+                    priority: 0,
+                    type: "LOWERCASE"
+                  }
+                ]
+              }
+            },
+          ]
+        }
+
+      },
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: "reduce-surface-attack-apis",
+      },
+    },
+  },
+  {
+    Rule: {
+      name: "MANAGED_malicious-ips-vpn-tor-hosting-providers",
+      priority: 2,
+      statement: {
+        managedRuleGroupStatement: {
+          vendorName: "AWS",
+          name: "AWSManagedRulesAnonymousIpList",
+        },
+      },
+      overrideAction: { none: {} },
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: "MANAGED_malicious-ips-vpn-tor-hosting-providers",
+      },
+    }
+  },
+  {
+    Rule: {
+      name: "MANAGED_malicious-ips-ddos-scanners",
+      priority: 3,
+      statement: {
+        managedRuleGroupStatement: {
+          vendorName: "AWS",
+          name: "AWSManagedRulesAmazonIpReputationList",
+        },
+      },
+      overrideAction: { none: {} },
+      ruleActionOverrides: [
+        {
+          actionToUse: {
+            block: {}
+          },
+          name: 'AWSManagedIPDDoSList'
+        },
+      ],
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: "MANAGED_malicious-ips-ddos-scanners",
+      },
+    }
+  },
+  {
+    Rule: {
+      name: "CUSTOM_rate_limit_IP_400",
+      priority: 4,
+      statement: {
+        rateBasedStatement: {
+          aggregateKeyType: "IP",
+          limit: 400,
+          evaluationWindowSec: 60
+        },
+      },
+      action: {
+        block: {}
+      },
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: "BlanketRateLimit",
+      },
+    }
+  },
+
+  {
+    Rule: {
+      name: "MANAGED_general_bot_protection",
+      priority: 5,
+      statement: {
+        managedRuleGroupStatement: {
+          vendorName: "AWS",
+          name: "AWSManagedRulesBotControlRuleSet",
+          managedRuleGroupConfigs: [
+            {
+              awsManagedRulesBotControlRuleSet: { inspectionLevel: "TARGETED" }
+            }
+          ]
+        },
+      },
+      overrideAction: { none: {} },
+      ruleActionOverrides: [
+        {
+          actionToUse: {
+            block: {}
+          },
+          name: 'TGT_TokenReuseIp'
+        },
+        {
+          actionToUse: {
+            catpcha: {}
+          },
+          name: 'TGT_ML_CoordinatedActivityHigh'
+        },
+      ],
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: "MANAGED_general_bot_protection",
+      },
+    }
+  },
+  {
+    Rule: {
+      name: "CUSTOM_block-requests-to-apis-with-non-valid-tokens",
+      priority: 6,
+      action: { block: {} },
+      statement: {
+        andStatement: {
+          statements: [
+            {
+              orStatement: {
+                statements: [
+                  {
+                    labelMatchStatement: {
+                      scope: 'LABEL',
+                      key: 'awswaf:managed:token:absent'
+                    }
+                  },
+                  {
+                    labelMatchStatement: {
+                      scope: 'LABEL',
+                      key: 'awswaf:managed:token:rejected'
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              orStatement: {
+                statements: [
+                  {
+                    byteMatchStatement: {
+                      fieldToMatch: { uriPath: {} },
+                      positionalConstraint: "STARTS_WITH",
+                      searchString: "/api/login",
+                      textTransformations: [
+                        {
+                          priority: 0,
+                          type: "LOWERCASE"
+                        }
+                      ]
+                    }
+                  },
+
+                  {
+                    byteMatchStatement: {
+                      fieldToMatch: { uriPath: {} },
+                      positionalConstraint: "STARTS_WITH",
+                      searchString: "/api/register",
+                      textTransformations: [
+                        {
+                          priority: 0,
+                          type: "LOWERCASE"
+                        }
+                      ]
+                    }
+                  },
+                ]
+              }
+            },
+          ]
+        }
+
+      },
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: "CUSTOM_block-requests-to-apis-with-non-valid-tokens",
+      },
+    },
+  },
+  {
+    Rule: {
+      name: "MANAGED_account-takover-prevention-login-api",
+      priority: 7,
+      statement: {
+        managedRuleGroupStatement: {
+          vendorName: "AWS",
+          name: "AWSManagedRulesATPRuleSet",
+          scopeDownStatement: {
+            byteMatchStatement: {
+              fieldToMatch: { uriPath: {} },
+              positionalConstraint: "STARTS_WITH",
+              searchString: "/api/login",
+              textTransformations: [
+                {
+                  priority: 0,
+                  type: "LOWERCASE"
+                }
+              ]
+            }
+          },
+          managedRuleGroupConfigs: [
+            {
+              awsManagedRulesAtpRuleSet: {
+                loginPath: '/api/login',
+                requestInspection: {
+                  passwordField: {
+                    identifier: '/password',
+                  },
+                  payloadType: 'JSON',
+                  usernameField: {
+                    identifier: '/username',
+                  },
+                },
+                responseInspection: {
+                  statusCode: {
+                    successCodes: [200],
+                    failureCodes: [401]
+                  }
+                }
+              }
+            }
+          ]
+        },
+      },
+      overrideAction: { none: {} },
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: "MANAGED_account-takover-prevention-login-api",
+      },
+    }
+  },
+  {
+    Rule: {
+      name: "CUSTOM_block-logins-with-compromised-credentials",
+      priority: 8,
+      action: { block: {} },
+      statement: {
+        labelMatchStatement: {
+          scope: 'LABEL',
+          key: 'awswaf:managed:aws:atp:signal:credential_compromised'
+        }
+      },
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: "CUSTOM_block-logins-with-compromised-credentials",
+      },
+    },
+  },
+  {
+    Rule: {
+      name: "MANAGED_fake-account-creation-prevention",
+      priority: 9,
+      statement: {
+        managedRuleGroupStatement: {
+          vendorName: "AWS",
+          name: "AWSManagedRulesACFPRuleSet",
+          scopeDownStatement: {
+            byteMatchStatement: {
+              fieldToMatch: { uriPath: {} },
+              positionalConstraint: "STARTS_WITH",
+              searchString: "/api/register",
+              textTransformations: [
+                {
+                  priority: 0,
+                  type: "LOWERCASE"
+                }
+              ]
+            }
+          },
+          managedRuleGroupConfigs: [
+            {
+              awsManagedRulesAcfpRuleSet: {
+                creationPath: '/api/register',
+                registrationPagePath: '/register',
+                requestInspection: {
+                  passwordField: {
+                    identifier: '/password',
+                  },
+                  payloadType: 'JSON',
+                  usernameField: {
+                    identifier: '/username',
+                  },
+                  phoneNumberFields: [{
+                    identifier: '/phone',
+                  }],
+                  addressFields: [{
+                    identifier: '/address',
+                  }],
+                },
+                responseInspection: {
+                  statusCode: {
+                    successCodes: [200],
+                    failureCodes: [500]
+                  }
+                }
+              }
+            }
+          ]
+        },
+      },
+      overrideAction: { none: {} },
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: "MANAGED_fake-account-creation-prevention",
+      },
+    }
+  },
 ];
 
 export class StoreInfraStack extends cdk.Stack {
@@ -40,6 +406,7 @@ export class StoreInfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
 
+    // TODO understand what it means, and change physicalResourceId
     new AwsCustomResource(this, 'initDDBresource', {
       onCreate: {
         service: 'DynamoDB',
@@ -57,7 +424,7 @@ export class StoreInfraStack extends cdk.Stack {
                 }
               }
             })),
-            [usersTable.tableName] : [
+            [usersTable.tableName]: [
               {
                 PutRequest: {
                   Item: {
@@ -68,13 +435,13 @@ export class StoreInfraStack extends cdk.Stack {
                   }
                 }
               }
-              
+
             ]
           }
         },
-        physicalResourceId: PhysicalResourceId.of('initDDBresourc'),
+        physicalResourceId: PhysicalResourceId.of('initDDBresource'),
       },
-      policy: AwsCustomResourcePolicy.fromSdkCalls({  //wtf?
+      policy: AwsCustomResourcePolicy.fromSdkCalls({
         resources: AwsCustomResourcePolicy.ANY_RESOURCE,
       }),
     });
@@ -93,32 +460,36 @@ export class StoreInfraStack extends cdk.Stack {
       destinationKeyPrefix: 'images/',
     });
 
+    // TODO use a different VPC, or use default one
     // Create a VPC (or use an existing one)
     const vpc = new ec2.Vpc(this, 'store_vpc', {
-        maxAzs: 3,
-        subnetConfiguration: [
-          {
-            cidrMask: 24,
-            name: 'Public',
-            subnetType: ec2.SubnetType.PUBLIC,
-          }
-        ]
+      maxAzs: 3,
+      subnetConfiguration: [
+        {
+          cidrMask: 24,
+          name: 'Public',
+          subnetType: ec2.SubnetType.PUBLIC,
+        }
+      ]
     });
 
+    // Lock it to CloudFront IPs
     // Create a security group
     const securityGroup = new ec2.SecurityGroup(this, 'MySecurityGroup', {
       vpc,
-      description: 'Allow port 3000 from CloudFront IP ranges',
+      description: 'Allow access to EC2 on port 3000',
       allowAllOutbound: true
     });
 
     // Add SG ingress rules TODO update to CloudFront only
     securityGroup.addIngressRule(
-      ec2.Peer.ipv4('0.0.0.0/0'),
+      //ec2.Peer.ipv4('0.0.0.0/0'),
+      ec2.Peer.prefixList("pl-3b927c52"), //TODO for different regions https://github.com/aws/aws-cdk/issues/15115
       ec2.Port.tcp(3000),
-      'Allow port 3000 from CloudFront'
+      'Allow port 3000 on IPv4 from CloudFront '
     );
-    securityGroup.addIngressRule( //remove
+    // TODO keep or remove for troubleshooting
+    securityGroup.addIngressRule(
       ec2.Peer.ipv4('0.0.0.0/0'),
       ec2.Port.tcp(22),
       'Allow SSH'
@@ -130,10 +501,7 @@ export class StoreInfraStack extends cdk.Stack {
     });
 
     // Add DynamoDB read/write permissions to the role
-    const table_products = dynamodb.Table.fromTableName(this, 'store_products_table', 'test_products');
-    table_products.grantReadWriteData(role);
     productsTable.grantReadWriteData(role);
-
     usersTable.grantReadWriteData(role);
 
     // Get the latest Ubuntu AMI
@@ -153,7 +521,41 @@ export class StoreInfraStack extends cdk.Stack {
       associatePublicIpAddress: true,
     });
 
-    // Add user data (you can modify this later)
+    const webACLName = 'RecycleBinBoutiqueACL';
+    const webACL = new waf.CfnWebACL(this, "webACL", {
+      name: webACLName,
+      defaultAction: { allow: {} },
+      scope: "CLOUDFRONT",
+      visibilityConfig: {
+        cloudWatchMetricsEnabled: true,
+        metricName: "RecycleBinBoutiqueACL",
+        sampledRequestsEnabled: true,
+      },
+      rules: wafDefaultRules.map((wafRule) => wafRule.Rule),
+    });
+
+    // TODO understand what it means, and change physicalResourceId
+    const wafCR = new AwsCustomResource(this, 'WAFproperties', {
+      onCreate: {
+        service: 'WAFv2',
+        action: 'GetWebACL',
+        parameters: {
+          Id: webACL.attrId,
+          Name: webACLName,
+          Scope: 'CLOUDFRONT'
+        },
+        outputPaths: ['ApplicationIntegrationURL'],
+        physicalResourceId: PhysicalResourceId.of('WAFproperties'),
+      },
+      policy: AwsCustomResourcePolicy.fromSdkCalls({
+        resources: AwsCustomResourcePolicy.ANY_RESOURCE,
+      }),
+    });
+
+    const wafIntegrationURL = wafCR.getResponseField('ApplicationIntegrationURL');
+
+    // TODO add WAF stuff
+    // Add user data
     instance.addUserData(
       '#!/bin/bash',
       'sudo apt update',
@@ -163,14 +565,16 @@ export class StoreInfraStack extends cdk.Stack {
       'sudo npm install pm2 -g',
       `git clone ${GITHUB_REPO}`,
       'cd recycle-bin-boutique/store-app',
-      `echo '{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${SECRET_KEY}","aws_region": "${this.region}"}' > aws-backend-config.json`, 
+      `echo '{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${SECRET_KEY}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js"}' > aws-backend-config.json`,
       'npm install',
       'npm run build',
       'pm2 start npm --name nextjs-app -- run start -- -p 3000'
     );
 
+    // TODO add image optimization, security headrs, http/3, origin shield
     const cdn = new cdk.aws_cloudfront.Distribution(this, 'store-cdn', {
       comment: 'CloudFront to serve the Recycle Bin Boutique',
+      webAclId: webACL.attrArn,
       defaultBehavior: {
         origin: new cdk.aws_cloudfront_origins.HttpOrigin(instance.instancePublicDnsName, {
           httpPort: 3000,
@@ -188,7 +592,7 @@ export class StoreInfraStack extends cdk.Stack {
           cachePolicy: cdk.aws_cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
         },
       },
-      
+
     });
 
     new cdk.CfnOutput(this, 'CloudFrontDomainName', {
