@@ -61,6 +61,8 @@ fields @timestamp, @message
 
 # TODO / Roadmap
 * Fix rules override in WAF
+* Captcha vpn
+* Use cloudshell
 * Add captcha scenario
 * WAF logging
 * Change the narration to do use case build up
