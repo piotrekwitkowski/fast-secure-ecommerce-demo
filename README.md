@@ -63,6 +63,7 @@ fields @timestamp, @message
 * Fix rules override in WAF
 * Add captcha scenario
 * WAF logging
+* Change the narration to do use case build up
 * Refactor nextjs app code
 * Refactor infra code
 * Add ico icon
