@@ -25,7 +25,7 @@ It is exposed to the internet through CloudFront and protected with AWS WAF.
 ![](rbb-architecture.png)
 
 
-# edge security testing scenarios
+# Edge security testing scenarios
 
 Navigate to scripts folder using the ```cd scripts``` command, then go through the different testing scenarios, and make sure that you replace the CloudFront domain name in the commands with the one in the CDK deployment output.
 
@@ -53,33 +53,34 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 
 # Troubleshooting
 
-If the backend is not reachable, connect to the EC2 instance using the AWS console, and use any of the following commands:
+If the backend is not reachable, connect to the EC2 instance using the AWS console, and use the appropriate command of the following :
 
 ```
 pm2 list
 pm2 restart nextjs-app
 pm2 start npm --name nextjs-app -- run start -- -p 3000
+```
 
-cat /var/log/cloud-init.log and
-cat /var/log/cloud-init-output.log
-
+Querying WAF logs to understand what happened with a specific reauest
+```
 fields @timestamp, @message
 | sort @timestamp desc
 | filter httpRequest.requestId = ' UW9-AA4dRZVxrLJeVEWIoXt-8mZ98b7gfYH-NhXJhgwIG76HymvrOw=='
 | limit 20
 ```
 
+
 # TODO / Roadmap
+* Refactor infra code
 * Fix rules override in WAF
-* Captcha vpn
 * Use cloudshell
-* Add captcha scenario
-* WAF logging
+* Add captcha scenario with VPN
+* Enable WAF logging
 * Change the narration to do use case build up
 * Refactor nextjs app code
-* Refactor infra code
 * Add ico icon
 * Script to generate data and populate the store
 * Managing cart actions
-* Image optimization
+* RUM
+* Trace ID page
 * A/B testing  with rule engine
