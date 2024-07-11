@@ -8,6 +8,7 @@ An online store demo to showcase the capabilites of AWS Edge Services, mainly Cl
 git clone https://github.com/achrafsouk/recycle-bin-boutique.git
 cd recycle-bin-boutique/store-infra
 npm install
+npm install -f --omit=optional --prefix functions/image-processing sharp@^0.33.3 @img/sharp-linux-x64 @img/sharp-libvips-linux-x64
 cdk deploy
 ```
 
