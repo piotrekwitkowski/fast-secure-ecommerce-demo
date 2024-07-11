@@ -1,5 +1,6 @@
 import Layout from './components/Layout';
 import Link from 'next/link';
+import Image from 'next/image'
 
 export default function Home({ products }) {
   return (
@@ -9,7 +10,7 @@ export default function Home({ products }) {
         {products.map((product) => (
           <Link href={`/product/${product.id}`} key={product.id}>
             <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
-              <img src={product.image} alt={product.name} className="w-full h-400 object-cover" />
+              <Image src={product.image} alt={product.name} className="w-full h-400 object-cover"  layout="responsive" width={640} height={640}/>
               <div className="p-4">
                 <h2 className="text-xl font-semibold mb-2">{product.name}</h2>
                 <p className="text-gray-600 mb-4">{product.description.substring(0, 60)}...</p>
