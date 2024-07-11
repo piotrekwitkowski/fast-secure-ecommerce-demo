@@ -25,7 +25,7 @@ It is exposed to the internet through CloudFront and protected with AWS WAF.
 ![](rbb-architecture.png)
 
 
-# AWS WAF testing scenarios
+# edge security testing scenarios
 
 Navigate to scripts folder using the ```cd scripts``` command, then go through the different testing scenarios, and make sure that you replace the CloudFront domain name in the commands with the one in the CDK deployment output.
 
@@ -44,6 +44,12 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 | **Credential Stuffing** | Password traversal detection | Using the same username, e.g. joe, login with different passwords 10-20 times until the api call returns 403 |
 | **Fake Account Creation** | Use a session to create many accounts | Try to create multiple acounts, and verify a 405 block after a few successful attempts |
 
+# Content delivery testing scenarios
+
+
+| Use case  | Test scenario  | How to test | 
+|:------------- |:--------------- | :-------------|
+| **Image optimization** | Verfiy images are resized and format is optimized| NextJS Image component automatically selects the size of the image. Resize the browser and verify that the returned image size has changed. Verify that webp format is detected and returned autmatically. | 
 
 # Troubleshooting
 
