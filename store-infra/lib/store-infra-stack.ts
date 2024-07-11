@@ -1,7 +1,11 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as cforigins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as waf from "aws-cdk-lib/aws-wafv2";
 // TODO Refactor cloudfront / s3
 import { AwsCustomResource, PhysicalResourceId, AwsCustomResourcePolicy } from 'aws-cdk-lib/custom-resources';
@@ -21,6 +25,10 @@ const products = [
   { id: 'cotton-tote-bag-009833', name: 'Organic Cotton Tote Bag', price: 6.99, image: 'images/cotton-tote-bag.jpeg', description: 'Sturdy, washable shopping bag made from organic cotton. Reduces reliance on disposable bags and supports sustainable agriculture.' },
   { id: 'glass-cleaning-kit-4443', name: 'Refillable Glass Cleaning Kit', price: 0.99, image: 'images/glass-cleaning-kit.jpeg', description: 'All-purpose cleaner in a reusable glass bottle with concentrated refills. Effective cleaning power with less packaging waste.' },
 ];
+var S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = '90';
+var S3_TRANSFORMED_IMAGE_CACHE_TTL = 'max-age=31622400';
+var LAMBDA_MEMORY = '1500';
+var LAMBDA_TIMEOUT = 60;
 const wafDefaultRules = [
   {
     Rule: {
@@ -465,8 +473,8 @@ export class StoreInfraStack extends cdk.Stack {
 
     const originalImageBucket = new cdk.aws_s3.Bucket(this, 's3-sample-original-image-bucket', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      blockPublicAccess: cdk.aws_s3.BlockPublicAccess.BLOCK_ALL,
-      encryption: cdk.aws_s3.BucketEncryption.S3_MANAGED,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
       autoDeleteObjects: true,
     });
@@ -476,6 +484,53 @@ export class StoreInfraStack extends cdk.Stack {
       destinationBucket: originalImageBucket,
       destinationKeyPrefix: 'images/',
     });
+
+    const transformedImageBucket = new s3.Bucket(this, 's3-transformed-image-bucket', {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+      lifecycleRules: [
+        {
+          expiration: cdk.Duration.days(parseInt(S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION)),
+        },
+      ],
+    });
+
+    // Create Lambda for image processing
+    var imageProcessing = new lambda.Function(this, 'image-optimization-lambda', {
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset('functions/image-processing-lambda'), 
+      timeout: cdk.Duration.seconds(LAMBDA_TIMEOUT),
+      memorySize: parseInt(LAMBDA_MEMORY),
+      environment: {
+        originalImageBucketName: originalImageBucket.bucketName,
+        transformedImageCacheTTL: S3_TRANSFORMED_IMAGE_CACHE_TTL,
+        transformedImageBucketName: transformedImageBucket.bucketName
+      },
+      logRetention: cdk.aws_logs.RetentionDays.ONE_DAY,
+    });
+    // IAM policy to read/write images from the relevant buckets
+    const s3ReadOriginalImagesPolicy = new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: ['arn:aws:s3:::' + originalImageBucket.bucketName + '/*'],
+    });
+
+    var s3WriteTransformedImagesPolicy = new iam.PolicyStatement({
+      actions: ['s3:PutObject'],
+      resources: ['arn:aws:s3:::' + transformedImageBucket.bucketName + '/*'],
+    });
+
+    // statements of the IAM policy to attach to Lambda
+    var iamPolicyStatements = [s3ReadOriginalImagesPolicy, s3WriteTransformedImagesPolicy];
+
+    // attach iam policy to the role assumed by Lambda
+    imageProcessing.role?.attachInlinePolicy(
+      new iam.Policy(this, 'read-write-bucket-policy', {
+        statements: iamPolicyStatements,
+      }),
+    );
+    const imageProcessingURL = imageProcessing.addFunctionUrl();
+    const imageProcessingDomainName = cdk.Fn.parseDomainName(imageProcessingURL.url);
 
     // TODO use a different VPC, or use default one
     // Create a VPC (or use an existing one)
@@ -588,29 +643,62 @@ export class StoreInfraStack extends cdk.Stack {
       'pm2 start npm --name nextjs-app -- run start -- -p 3000'
     );
 
+    // Create a CloudFront Function for url rewrites
+    const imageURLformatting = new cloudfront.Function(this, 'imageURLformatting', {
+      code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/cloudfront-function-url-formatting/index.js' }),
+      functionName: `imageURLformatting${this.node.addr}`,
+    });
+
     // TODO add image optimization, security headrs, http/3, origin shield
-    const cdn = new cdk.aws_cloudfront.Distribution(this, 'store-cdn', {
+    const cdn = new cloudfront.Distribution(this, 'store-cdn', {
       comment: 'CloudFront to serve the Recycle Bin Boutique',
       webAclId: webACL.attrArn,
       defaultBehavior: {
-        origin: new cdk.aws_cloudfront_origins.HttpOrigin(instance.instancePublicDnsName, {
+        origin: new cforigins.HttpOrigin(instance.instancePublicDnsName, {
           httpPort: 3000,
-          protocolPolicy: cdk.aws_cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+          protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
         }),
-        viewerProtocolPolicy: cdk.aws_cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        cachePolicy: cdk.aws_cloudfront.CachePolicy.CACHING_DISABLED,
-        originRequestPolicy: cdk.aws_cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-        allowedMethods: cdk.aws_cloudfront.AllowedMethods.ALLOW_ALL,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
       },
       additionalBehaviors: {
         '/images/*': {
-          origin: new cdk.aws_cloudfront_origins.S3Origin(originalImageBucket),
-          viewerProtocolPolicy: cdk.aws_cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-          cachePolicy: cdk.aws_cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
+          origin: new cforigins.OriginGroup({
+            primaryOrigin: new cforigins.S3Origin(transformedImageBucket),
+            fallbackOrigin: new cforigins.HttpOrigin(imageProcessingDomainName),
+            fallbackStatusCodes: [403, 500, 503, 504],
+          }),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
+          functionAssociations: [{
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+            function: imageURLformatting,
+          }],
         },
       },
 
     });
+
+    // ADD OAC between CloudFront and LambdaURL
+    const oac = new cloudfront.CfnOriginAccessControl(this, "OAC", {
+      originAccessControlConfig: {
+        name: `oac${this.node.addr}`,
+        originAccessControlOriginType: "lambda",
+        signingBehavior: "always",
+        signingProtocol: "sigv4",
+      },
+    });
+
+    const cfnImageDelivery = cdn.node.defaultChild as cloudfront.CfnDistribution;
+    cfnImageDelivery.addPropertyOverride('DistributionConfig.Origins.2.OriginAccessControlId', oac.getAtt("Id"));
+
+    imageProcessing.addPermission("AllowCloudFrontServicePrincipal", {
+      principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
+      action: "lambda:InvokeFunctionUrl",
+      sourceArn: `arn:aws:cloudfront::${this.account}:distribution/${cdn.distributionId}`
+    })
 
     new cdk.CfnOutput(this, 'CloudFrontDomainName', {
       description: 'CloudFront domain name of the Recycle Bin Boutique',
