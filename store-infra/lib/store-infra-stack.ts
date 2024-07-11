@@ -7,7 +7,6 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as cforigins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as waf from "aws-cdk-lib/aws-wafv2";
-// TODO Refactor cloudfront / s3
 import { AwsCustomResource, PhysicalResourceId, AwsCustomResourcePolicy } from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 
@@ -415,6 +414,7 @@ export class StoreInfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // DyanmoDB tables to store users and prodcts data
     const usersTable = new dynamodb.Table(this, "usersTable", {
       partitionKey: {
         name: "username",
@@ -431,7 +431,7 @@ export class StoreInfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
 
-    // TODO understand what it means, and change physicalResourceId
+    // fill tables with initial data
     new AwsCustomResource(this, 'initDDBresource', {
       onCreate: {
         service: 'DynamoDB',
@@ -467,10 +467,11 @@ export class StoreInfraStack extends cdk.Stack {
         physicalResourceId: PhysicalResourceId.of('initDDBresource'),
       },
       policy: AwsCustomResourcePolicy.fromSdkCalls({
-        resources: AwsCustomResourcePolicy.ANY_RESOURCE,
+        resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
       }),
     });
 
+    // S3 bucket holding original images
     const originalImageBucket = new cdk.aws_s3.Bucket(this, 's3-sample-original-image-bucket', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
@@ -479,12 +480,14 @@ export class StoreInfraStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
+    // adding initial images to it
     new cdk.aws_s3_deployment.BucketDeployment(this, 'ProductImages', {
       sources: [cdk.aws_s3_deployment.Source.asset('../assets/images')],
       destinationBucket: originalImageBucket,
       destinationKeyPrefix: 'images/',
     });
 
+    // S3 bucket holding trasnformed images (resized and reformatted)
     const transformedImageBucket = new s3.Bucket(this, 's3-transformed-image-bucket', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
@@ -495,11 +498,11 @@ export class StoreInfraStack extends cdk.Stack {
       ],
     });
 
-    // Create Lambda for image processing
+    // Create Lambda URL for image processing
     var imageProcessing = new lambda.Function(this, 'image-optimization-lambda', {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset('functions/image-processing-lambda'), 
+      code: lambda.Code.fromAsset('functions/image-processing-lambda'),
       timeout: cdk.Duration.seconds(LAMBDA_TIMEOUT),
       memorySize: parseInt(LAMBDA_MEMORY),
       environment: {
@@ -509,7 +512,7 @@ export class StoreInfraStack extends cdk.Stack {
       },
       logRetention: cdk.aws_logs.RetentionDays.ONE_DAY,
     });
-    // IAM policy to read/write images from the relevant buckets
+    // IAM policy to allow this lambda to read/write images from the relevant buckets
     const s3ReadOriginalImagesPolicy = new iam.PolicyStatement({
       actions: ['s3:GetObject'],
       resources: ['arn:aws:s3:::' + originalImageBucket.bucketName + '/*'],
@@ -519,11 +522,8 @@ export class StoreInfraStack extends cdk.Stack {
       actions: ['s3:PutObject'],
       resources: ['arn:aws:s3:::' + transformedImageBucket.bucketName + '/*'],
     });
-
-    // statements of the IAM policy to attach to Lambda
     var iamPolicyStatements = [s3ReadOriginalImagesPolicy, s3WriteTransformedImagesPolicy];
 
-    // attach iam policy to the role assumed by Lambda
     imageProcessing.role?.attachInlinePolicy(
       new iam.Policy(this, 'read-write-bucket-policy', {
         statements: iamPolicyStatements,
@@ -532,8 +532,13 @@ export class StoreInfraStack extends cdk.Stack {
     const imageProcessingURL = imageProcessing.addFunctionUrl();
     const imageProcessingDomainName = cdk.Fn.parseDomainName(imageProcessingURL.url);
 
-    // TODO use a different VPC, or use default one
-    // Create a VPC (or use an existing one)
+    // Create a CloudFront Function for detecting optimal format, validating inputs and rewriting url
+    const imageURLformatting = new cloudfront.Function(this, 'imageURLformatting', {
+      code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/cloudfront-function-url-formatting/index.js' }),
+      functionName: `imageURLformatting${this.node.addr}`,
+    });
+
+    // Create a VPC
     const vpc = new ec2.Vpc(this, 'store_vpc', {
       maxAzs: 3,
       subnetConfiguration: [
@@ -545,44 +550,58 @@ export class StoreInfraStack extends cdk.Stack {
       ]
     });
 
-    // Lock it to CloudFront IPs
-    // Create a security group
+
+    // Create a security group locked to CloudFront IPs
+    // first get the CloudFront prefix list in the CDK deployment region using a custom resource
+
+    const prefixListId = new AwsCustomResource(this, 'GetPrefixListId', {
+      onCreate: {
+        service: 'EC2',
+        action: 'DescribeManagedPrefixListsCommand',
+        parameters: {
+          Filters: [
+            {
+              Name: 'prefix-list-name',
+              Values: ['com.amazonaws.global.cloudfront.origin-facing'],
+            },
+          ],
+        },
+        physicalResourceId: PhysicalResourceId.of('GetPrefixListId'),
+      },
+      policy: AwsCustomResourcePolicy.fromSdkCalls({
+        resources: AwsCustomResourcePolicy.ANY_RESOURCE,//TODO make it more restrictive
+      }),
+    }).getResponseField('PrefixLists.0.PrefixListId');
+
     const securityGroup = new ec2.SecurityGroup(this, 'MySecurityGroup', {
       vpc,
-      description: 'Allow access to EC2 on port 3000',
+      description: 'Allow access from CloudFront IPs on port 3000, and any IP on port 22',
       allowAllOutbound: true
     });
-
-    // Add SG ingress rules TODO update to CloudFront only
     securityGroup.addIngressRule(
-      //ec2.Peer.ipv4('0.0.0.0/0'),
-      ec2.Peer.prefixList("pl-3b927c52"), //TODO for different regions https://github.com/aws/aws-cdk/issues/15115
+      ec2.Peer.prefixList(prefixListId),
       ec2.Port.tcp(3000),
       'Allow port 3000 on IPv4 from CloudFront '
     );
-    // TODO keep or remove for troubleshooting
+    // For troubleshooting, but in real world it would be restrcited.
     securityGroup.addIngressRule(
       ec2.Peer.ipv4('0.0.0.0/0'),
       ec2.Port.tcp(22),
       'Allow SSH'
     );
 
-    // Create an IAM role for the EC2 instance
+    // Create an IAM role for the EC2 instance with DynamoDB read/write permissions to the role
     const role = new iam.Role(this, 'MyEC2Role', {
       assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
     });
-
-    // Add DynamoDB read/write permissions to the role
     productsTable.grantReadWriteData(role);
     usersTable.grantReadWriteData(role);
 
-    // Get the latest Ubuntu AMI
+    // Get the latest Ubuntu AMI and Create the EC2 instance
     const ubuntu = ec2.MachineImage.fromSsmParameter(
       '/aws/service/canonical/ubuntu/server/focal/stable/current/amd64/hvm/ebs-gp2/ami-id',
       { os: ec2.OperatingSystemType.LINUX }
     );
-
-    // Create the EC2 instance
     const instance = new ec2.Instance(this, 'store_backend_ec2', {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.SMALL),
       machineImage: ubuntu,
@@ -593,6 +612,7 @@ export class StoreInfraStack extends cdk.Stack {
       associatePublicIpAddress: true,
     });
 
+    // Create a WebACL and populate it with rules
     const webACLName = 'RecycleBinBoutiqueACL';
     const webACL = new waf.CfnWebACL(this, "webACL", {
       name: webACLName,
@@ -606,7 +626,7 @@ export class StoreInfraStack extends cdk.Stack {
       rules: wafDefaultRules.map((wafRule) => wafRule.Rule),
     });
 
-    // TODO understand what it means, and change physicalResourceId
+    // Get the url used for the Client side javascript integration
     const wafCR = new AwsCustomResource(this, 'WAFproperties', {
       onCreate: {
         service: 'WAFv2',
@@ -620,14 +640,12 @@ export class StoreInfraStack extends cdk.Stack {
         physicalResourceId: PhysicalResourceId.of('WAFproperties'),
       },
       policy: AwsCustomResourcePolicy.fromSdkCalls({
-        resources: AwsCustomResourcePolicy.ANY_RESOURCE,
+        resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
       }),
     });
-
     const wafIntegrationURL = wafCR.getResponseField('ApplicationIntegrationURL');
 
-    // TODO add WAF stuff
-    // Add user data
+    // Script to bootstrap the Nextjs app on EC2
     instance.addUserData(
       '#!/bin/bash',
       'sudo apt update',
@@ -643,16 +661,11 @@ export class StoreInfraStack extends cdk.Stack {
       'pm2 start npm --name nextjs-app -- run start -- -p 3000'
     );
 
-    // Create a CloudFront Function for url rewrites
-    const imageURLformatting = new cloudfront.Function(this, 'imageURLformatting', {
-      code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/cloudfront-function-url-formatting/index.js' }),
-      functionName: `imageURLformatting${this.node.addr}`,
-    });
-
-    // TODO add image optimization, security headrs, http/3, origin shield
+    // Create a CloudFront distribution TODO add security headers
     const cdn = new cloudfront.Distribution(this, 'store-cdn', {
       comment: 'CloudFront to serve the Recycle Bin Boutique',
       webAclId: webACL.attrArn,
+      httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       defaultBehavior: {
         origin: new cforigins.HttpOrigin(instance.instancePublicDnsName, {
           httpPort: 3000,
@@ -690,16 +703,15 @@ export class StoreInfraStack extends cdk.Stack {
         signingProtocol: "sigv4",
       },
     });
-
     const cfnImageDelivery = cdn.node.defaultChild as cloudfront.CfnDistribution;
     cfnImageDelivery.addPropertyOverride('DistributionConfig.Origins.2.OriginAccessControlId', oac.getAtt("Id"));
-
     imageProcessing.addPermission("AllowCloudFrontServicePrincipal", {
       principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
       action: "lambda:InvokeFunctionUrl",
       sourceArn: `arn:aws:cloudfront::${this.account}:distribution/${cdn.distributionId}`
     })
 
+    // Output cloudfront domain name
     new cdk.CfnOutput(this, 'CloudFrontDomainName', {
       description: 'CloudFront domain name of the Recycle Bin Boutique',
       value: cdn.distributionDomainName
