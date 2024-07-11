@@ -18,8 +18,11 @@ The backend includes:
 * A nextJS based SSR application hosted on an EC2 instance.
 * DynamoDB tables to store user and product information
 * S3 bucket to store product images
+* Image optimization component based on an S3 bucket for storing trasnformed images, Lambda function to transform them and a CloudFront Function to automatically detect the browser image capabilities.
 
-It is exposed to the internet using CloudFront, with a WAF WEbACL.
+It is exposed to the internet through CloudFront and protected with AWS WAF.
+
+![](rbb-architecture.png)
 
 
 # AWS WAF testing scenarios
