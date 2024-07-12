@@ -1,3 +1,5 @@
+import * as path from "path";
+import * as fs from "fs";
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -11,7 +13,7 @@ import { AwsCustomResource, PhysicalResourceId, AwsCustomResourcePolicy } from '
 import { Construct } from 'constructs';
 import { createHash } from 'crypto';
 import { products, defaultUser } from '../ddb-data';
-import { wafRules}  from '../waf-rules';
+import { wafRules } from '../waf-rules';
 import { stackConfig } from '../stack-config';
 
 
@@ -134,8 +136,9 @@ export class StoreInfraStack extends cdk.Stack {
 
     // Create a CloudFront Function for detecting optimal format, validating inputs and rewriting url
     const imageURLformatting = new cloudfront.Function(this, 'imageURLformatting', {
-      code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/cloudfront-function-url-formatting/index.js' }),
+      code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/cloudfront-function-image-url-formatting/index.js' }),
       functionName: `imageURLformatting${this.node.addr}`,
+      runtime: cloudfront.FunctionRuntime.JS_2_0,
     });
 
     // Create a VPC
@@ -262,19 +265,53 @@ export class StoreInfraStack extends cdk.Stack {
     );
 
     // Create a CloudFront distribution TODO add security headers
+
+    // Create KeyValueStore that will store the engine rules
+    const kvs = new cloudfront.KeyValueStore(this, 'KeyValueStore', {
+      keyValueStoreName: 'html-rules-kvs',
+    });
+
+    // Replace KVS id in the CloudFront Function code, then minify the code
+    let htmlRulesRequestFunctionCode = fs.readFileSync(path.join(__dirname, "../functions/cloudfront-function-html-rules/request-index.js"), 'utf-8');
+    htmlRulesRequestFunctionCode = htmlRulesRequestFunctionCode.replace(/__KVS_ID__/g, kvs.keyValueStoreId);
+
+    const htmlRulesRequestFunction = new cloudfront.Function(this, 'htmlRulesRequestFunction', {
+      code: cloudfront.FunctionCode.fromInline(htmlRulesRequestFunctionCode),
+      functionName: `htmlRulesReqCFF${this.node.addr}`,
+      runtime: cloudfront.FunctionRuntime.JS_2_0,
+      keyValueStore: kvs,
+    });
+
+    const htmlRulesResponseFunction = new cloudfront.Function(this, 'htmlRulesResponseFunction', {
+      code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/cloudfront-function-html-rules/response-index.js' }),
+      functionName: `htmlRulesRespCFF${this.node.addr}`,
+      runtime: cloudfront.FunctionRuntime.JS_2_0,
+    });
+
+    const backendOrigin = new cforigins.HttpOrigin(instance.instancePublicDnsName, {
+      httpPort: 3000,
+      protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+    });
+
     const cdn = new cloudfront.Distribution(this, 'store-cdn', {
       comment: 'CloudFront to serve the Recycle Bin Boutique',
       webAclId: webACL.attrArn,
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       defaultBehavior: {
-        origin: new cforigins.HttpOrigin(instance.instancePublicDnsName, {
-          httpPort: 3000,
-          protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
-        }),
+        origin: backendOrigin,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_AND_CLOUDFRONT_2022, //TODO could break with ALB
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+        functionAssociations: [{
+          eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          function: htmlRulesRequestFunction,
+        },
+        {
+          eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE,
+          function: htmlRulesResponseFunction,
+        },
+      ],
       },
       additionalBehaviors: {
         '/images/*': {
@@ -289,6 +326,13 @@ export class StoreInfraStack extends cdk.Stack {
             eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
             function: imageURLformatting,
           }],
+        },
+        '/api/*': {
+          origin: backendOrigin,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         },
       },
 

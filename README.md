@@ -51,6 +51,9 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 |:------------- |:--------------- | :-------------|
 | **Image optimization** | Verfiy images are resized and format is optimized| NextJS Image component automatically selects the size of the image. Resize the browser and verify that the returned image size has changed. Verify that webp format is detected and returned autmatically. | 
 
+
+{"uri":"/index-v2", "countries":"FR,UK"}
+
 # Troubleshooting
 
 If the backend is not reachable, connect to the EC2 instance using the AWS console, and use the appropriate command of the following :
@@ -73,7 +76,7 @@ fields @timestamp, @message
 # TODO / Roadmap
 * Use cloudshell
 * Add captcha scenario with VPN
-* Enable WAF logging
+* Observability
 * Change the narration to do use case build up
 * Refactor nextjs app code
 * Add ico icon
@@ -82,3 +85,4 @@ fields @timestamp, @message
 * RUM
 * Trace ID page
 * A/B testing  with rule engine
+* caching of landing page for non logged users
