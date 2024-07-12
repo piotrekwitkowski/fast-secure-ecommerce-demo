@@ -86,3 +86,4 @@ fields @timestamp, @message
 * Trace ID page
 * A/B testing  with rule engine
 * caching of landing page for non logged users
+* HTTP redirections
