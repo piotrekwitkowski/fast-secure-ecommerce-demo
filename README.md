@@ -87,3 +87,4 @@ fields @timestamp, @message
 * A/B testing  with rule engine
 * caching of landing page for non logged users
 * HTTP redirections
+* Graceful failover
