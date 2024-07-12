@@ -9,6 +9,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as cforigins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as waf from "aws-cdk-lib/aws-wafv2";
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { AwsCustomResource, PhysicalResourceId, AwsCustomResourcePolicy } from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 import { createHash } from 'crypto';
@@ -87,6 +88,60 @@ export class StoreInfraStack extends cdk.Stack {
       sources: [cdk.aws_s3_deployment.Source.asset('../assets/images')],
       destinationBucket: originalImageBucket,
       destinationKeyPrefix: 'images/',
+    });
+
+    // Creating cloudwatch RUM
+
+    const cwRumIdentityPool = new cognito.CfnIdentityPool(this, 'cw-rum-identity-pool', {
+      allowUnauthenticatedIdentities: true,
+    });
+
+    const cwRumUnauthenticatedRole = new iam.Role(this, 'cw-rum-unauthenticated-role', {
+      assumedBy: new iam.FederatedPrincipal(
+        'cognito-identity.amazonaws.com',
+        {
+          "StringEquals": {
+            "cognito-identity.amazonaws.com:aud": cwRumIdentityPool.ref
+          },
+          "ForAnyValue:StringLike": {
+            "cognito-identity.amazonaws.com:amr": "unauthenticated"
+          }
+        },
+        "sts:AssumeRoleWithWebIdentity"
+      )
+    });
+
+    cwRumUnauthenticatedRole.addToPolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        "rum:PutRumEvents"
+      ],
+      resources: [
+        `arn:aws:rum:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:appmonitor/recylebinboutique`
+      ]
+    }));
+
+    const cwRumIdentityPoolRoleAttachment = new cognito.CfnIdentityPoolRoleAttachment(this,
+      'cw-rum-identity-pool-role-attachment',
+      {
+        identityPoolId: cwRumIdentityPool.ref,
+        roles: {
+          "unauthenticated": cwRumUnauthenticatedRole.roleArn
+        }
+      });
+
+    const cfnAppMonitor = new cdk.aws_rum.CfnAppMonitor(this, 'MyCfnAppMonitor', {
+      domain: 'www.dummy.com',
+      name: 'RecyleBonBoutiqueRUM',
+      appMonitorConfiguration: {
+        allowCookies: true,
+        enableXRay: false,
+        sessionSampleRate: 1,
+        telemetries: ['errors', 'performance', 'http'],
+        identityPoolId: cwRumIdentityPool.ref,
+        guestRoleArn: cwRumUnauthenticatedRole.roleArn
+      },
+
     });
 
     // S3 bucket holding trasnformed images (resized and reformatted)
@@ -248,6 +303,23 @@ export class StoreInfraStack extends cdk.Stack {
     });
     const wafIntegrationURL = wafCR.getResponseField('ApplicationIntegrationURL');
 
+    // get the paramters of the RUM script tag
+    const rumParameters = new AwsCustomResource(this, 'RumParameters', {
+      onCreate: {
+        service: 'RUM',
+        action: 'GetAppMonitor',
+        parameters: {
+          Name: 'RecyleBonBoutiqueRUM',
+        },
+        physicalResourceId: PhysicalResourceId.of('RumParameters'), 
+      },
+      policy: AwsCustomResourcePolicy.fromSdkCalls({
+        resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
+      }),
+    });
+    const rumMonitorId = rumParameters.getResponseField('AppMonitor.Id');
+    const rumMonitorIdentityPoolId = rumParameters.getResponseField('AppMonitor.AppMonitorConfiguration.IdentityPoolId');
+
     // Script to bootstrap the Nextjs app on EC2
     instance.addUserData(
       '#!/bin/bash',
@@ -258,7 +330,7 @@ export class StoreInfraStack extends cdk.Stack {
       'sudo npm install pm2 -g',
       `git clone ${stackConfig.GITHUB_REPO}`,
       'cd recycle-bin-boutique/store-app',
-      `echo '{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${createHash('md5').update(this.node.addr).digest('hex')}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js"}' > aws-backend-config.json`,
+      `echo '{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${createHash('md5').update(this.node.addr).digest('hex')}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js", "rumMonitorId": "${rumMonitorId}", "rumMonitorIdentityPoolId": "${rumMonitorIdentityPoolId}"}' > aws-backend-config.json`,
       'npm install',
       'npm run build',
       'pm2 start npm --name nextjs-app -- run start -- -p 3000'
@@ -311,7 +383,7 @@ export class StoreInfraStack extends cdk.Stack {
           eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE,
           function: htmlRulesResponseFunction,
         },
-      ],
+        ],
       },
       additionalBehaviors: {
         '/images/*': {
@@ -354,6 +426,30 @@ export class StoreInfraStack extends cdk.Stack {
       action: "lambda:InvokeFunctionUrl",
       sourceArn: `arn:aws:cloudfront::${this.account}:distribution/${cdn.distributionId}`
     })
+
+    // Update the domain name of RUM TODO risk of drift detection
+    new AwsCustomResource(this, 'RumUpdate', {
+      onCreate: {
+        service: 'RUM',
+        action: 'UpdateAppMonitor',
+        parameters: {
+          Domain: cdn.distributionDomainName,
+          Name: 'RecyleBonBoutiqueRUM',
+          AppMonitorConfiguration: {
+            AllowCookies: true,
+            EnableXRay: false,
+            SessionSampleRate: 1,
+            Telemetries: ['errors', 'performance', 'http'],
+            IdentityPoolId: cwRumIdentityPool.ref,
+            GuestRoleArn: cwRumUnauthenticatedRole.roleArn
+          }
+        },
+        physicalResourceId: PhysicalResourceId.of('RumUpdate'),
+      },
+      policy: AwsCustomResourcePolicy.fromSdkCalls({
+        resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
+      }),
+    });
 
     // Output cloudfront domain name
     new cdk.CfnOutput(this, 'CloudFrontDomainName', {
