@@ -71,8 +71,6 @@ fields @timestamp, @message
 
 
 # TODO / Roadmap
-* Refactor infra code
-* Fix rules override in WAF
 * Use cloudshell
 * Add captcha scenario with VPN
 * Enable WAF logging

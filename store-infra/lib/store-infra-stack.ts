@@ -9,406 +9,11 @@ import * as cforigins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as waf from "aws-cdk-lib/aws-wafv2";
 import { AwsCustomResource, PhysicalResourceId, AwsCustomResourcePolicy } from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
+import { createHash } from 'crypto';
+import { products, defaultUser } from '../ddb-data';
+import { wafRules}  from '../waf-rules';
+import { stackConfig } from '../stack-config';
 
-// TODO move to config file
-const GITHUB_REPO = 'https://github.com/achrafsouk/recycle-bin-boutique';
-const SECRET_KEY = 'd34fFWEesds43fsFDsdf';
-const products = [
-  { id: 'eco-friendly-bottle-15345', name: 'Eco-friendly Water Bottle', price: 19.99, image: '/images/eco-friendly.jpeg', description: 'A great bottle for hydrating your self and protecting the nature' },
-  { id: 'organic-tshirt-74743', name: 'Organic Cotton T-shirt', price: 29.99, image: '/images/organic-tshirt.jpeg', description: 'For sensitive skins and eco conscious fashion lovers.' },
-  { id: 'recycled-paper-notebook-734743', name: 'Recycled Paper Notebook', price: 9.99, image: '/images/recycled-paper.jpeg', description: 'Save your thoughts, and save the environment from waste.' },
-  { id: 'bamboo-cutlery-set-9584', name: 'Bamboo Cutlery Set', price: 49.99, image: '/images/bamboo-cutlery-set.jpeg', description: 'Portable and reusable utensils made from sustainable bamboo. Perfect for on-the-go meals and reducing plastic waste.' },
-  { id: 'phone-charger-434834', name: 'Solar-Powered Phone Charger', price: 39.99, image: '/images/phone-charger.jpeg', description: 'Harness the sun energy to keep your devices charged. Ideal for outdoor enthusiasts and eco-conscious travelers.' },
-  { id: 'beeswax-food-wraps-43774', name: 'Beeswax Food Wraps', price: 129.99, image: '/images/beeswax-food-wraps.jpeg', description: 'Reusable, biodegradable alternative to plastic wrap. Keeps food fresh naturally and reduces single-use plastic in your kitchen.' },
-  { id: 'outdoor-rug-3347438', name: 'Recycled Plastic Outdoor Rug', price: 2.99, image: '/images/outdoor-rug.jpeg', description: 'Stylish and durable rug made from recycled plastic bottles. Perfect for patios and picnics while giving plastic waste a new life.' },
-  { id: 'cotton-tote-bag-009833', name: 'Organic Cotton Tote Bag', price: 6.99, image: '/images/cotton-tote-bag.jpeg', description: 'Sturdy, washable shopping bag made from organic cotton. Reduces reliance on disposable bags and supports sustainable agriculture.' },
-  { id: 'glass-cleaning-kit-4443', name: 'Refillable Glass Cleaning Kit', price: 0.99, image: '/images/glass-cleaning-kit.jpeg', description: 'All-purpose cleaner in a reusable glass bottle with concentrated refills. Effective cleaning power with less packaging waste.' },
-];
-var S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = '90';
-var S3_TRANSFORMED_IMAGE_CACHE_TTL = 'max-age=31622400';
-var LAMBDA_MEMORY = '1500';
-var LAMBDA_TIMEOUT = 60;
-const wafDefaultRules = [
-  {
-    Rule: {
-      name: "CUSTOM_reduce-surface-attack-apis",
-      priority: 1,
-      action: { block: {} },
-      statement: {
-        orStatement: {
-          statements: [
-            {
-              byteMatchStatement: {
-                fieldToMatch: { uriPath: {} },
-                positionalConstraint: "STARTS_WITH",
-                searchString: "/api/product",
-                textTransformations: [
-                  {
-                    priority: 0,
-                    type: "LOWERCASE"
-                  }
-                ]
-              }
-            },
-            {
-              byteMatchStatement: {
-                fieldToMatch: { uriPath: {} },
-                positionalConstraint: "STARTS_WITH",
-                searchString: "/api/products",
-                textTransformations: [
-                  {
-                    priority: 0,
-                    type: "LOWERCASE"
-                  }
-                ]
-              }
-            },
-          ]
-        }
-
-      },
-      visibilityConfig: {
-        sampledRequestsEnabled: true,
-        cloudWatchMetricsEnabled: true,
-        metricName: "reduce-surface-attack-apis",
-      },
-    },
-  },
-  {
-    Rule: {
-      name: "MANAGED_malicious-ips-vpn-tor-hosting-providers",
-      priority: 2,
-      statement: {
-        managedRuleGroupStatement: {
-          vendorName: "AWS",
-          name: "AWSManagedRulesAnonymousIpList",
-        },
-      },
-      overrideAction: { none: {} },
-      visibilityConfig: {
-        sampledRequestsEnabled: true,
-        cloudWatchMetricsEnabled: true,
-        metricName: "MANAGED_malicious-ips-vpn-tor-hosting-providers",
-      },
-    }
-  },
-  {
-    Rule: {
-      name: "MANAGED_malicious-ips-ddos-scanners",
-      priority: 3,
-      statement: {
-        managedRuleGroupStatement: {
-          vendorName: "AWS",
-          name: "AWSManagedRulesAmazonIpReputationList",
-        },
-      },
-      overrideAction: { none: {} },
-      ruleActionOverrides: [
-        {
-          actionToUse: {
-            block: {}
-          },
-          name: 'AWSManagedIPDDoSList'
-        },
-      ],
-      visibilityConfig: {
-        sampledRequestsEnabled: true,
-        cloudWatchMetricsEnabled: true,
-        metricName: "MANAGED_malicious-ips-ddos-scanners",
-      },
-    }
-  },
-  {
-    Rule: {
-      name: "CUSTOM_rate_limit_IP_400",
-      priority: 4,
-      statement: {
-        rateBasedStatement: {
-          aggregateKeyType: "IP",
-          limit: 400,
-          evaluationWindowSec: 60
-        },
-      },
-      action: {
-        block: {}
-      },
-      visibilityConfig: {
-        sampledRequestsEnabled: true,
-        cloudWatchMetricsEnabled: true,
-        metricName: "BlanketRateLimit",
-      },
-    }
-  },
-
-  {
-    Rule: {
-      name: "MANAGED_general_bot_protection",
-      priority: 5,
-      overrideAction: { none: {} },
-      statement: {
-        managedRuleGroupStatement: {
-          vendorName: "AWS",
-          name: "AWSManagedRulesBotControlRuleSet",
-          managedRuleGroupConfigs: [
-            {
-              awsManagedRulesBotControlRuleSet: { inspectionLevel: "TARGETED" }
-            }
-          ]
-        },
-      },
-      ruleActionOverrides: [
-        {
-          actionToUse: {
-            block: {}
-          },
-          name: "TGT_TokenReuseIp"
-        },
-        {
-          actionToUse: {
-            catpcha: {}
-          },
-          name: "TGT_ML_CoordinatedActivityHigh"
-        },
-      ],
-      visibilityConfig: {
-        sampledRequestsEnabled: true,
-        cloudWatchMetricsEnabled: true,
-        metricName: "MANAGED_general_bot_protection",
-      },
-    }
-  },
-  {
-    Rule: {
-      name: "CUSTOM_block-requests-to-apis-with-non-valid-tokens",
-      priority: 6,
-      action: { block: {} },
-      statement: {
-        andStatement: {
-          statements: [
-            {
-              orStatement: {
-                statements: [
-                  {
-                    labelMatchStatement: {
-                      scope: 'LABEL',
-                      key: 'awswaf:managed:token:absent'
-                    }
-                  },
-                  {
-                    labelMatchStatement: {
-                      scope: 'LABEL',
-                      key: 'awswaf:managed:token:rejected'
-                    }
-                  }
-                ]
-              }
-            },
-            {
-              orStatement: {
-                statements: [
-                  {
-                    byteMatchStatement: {
-                      fieldToMatch: { uriPath: {} },
-                      positionalConstraint: "STARTS_WITH",
-                      searchString: "/api/login",
-                      textTransformations: [
-                        {
-                          priority: 0,
-                          type: "LOWERCASE"
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    byteMatchStatement: {
-                      fieldToMatch: { uriPath: {} },
-                      positionalConstraint: "STARTS_WITH",
-                      searchString: "/api/register",
-                      textTransformations: [
-                        {
-                          priority: 0,
-                          type: "LOWERCASE"
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    byteMatchStatement: {
-                      fieldToMatch: { uriPath: {} },
-                      positionalConstraint: "STARTS_WITH",
-                      searchString: "/api/profile",
-                      textTransformations: [
-                        {
-                          priority: 0,
-                          type: "LOWERCASE"
-                        }
-                      ]
-                    }
-                  },
-                ]
-              }
-            },
-          ]
-        }
-
-      },
-      visibilityConfig: {
-        sampledRequestsEnabled: true,
-        cloudWatchMetricsEnabled: true,
-        metricName: "CUSTOM_block-requests-to-apis-with-non-valid-tokens",
-      },
-    },
-  },
-  {
-    Rule: {
-      name: "MANAGED_account-takover-prevention-login-api",
-      priority: 7,
-      statement: {
-        managedRuleGroupStatement: {
-          vendorName: "AWS",
-          name: "AWSManagedRulesATPRuleSet",
-          scopeDownStatement: {
-            byteMatchStatement: {
-              fieldToMatch: { uriPath: {} },
-              positionalConstraint: "STARTS_WITH",
-              searchString: "/api/login",
-              textTransformations: [
-                {
-                  priority: 0,
-                  type: "LOWERCASE"
-                }
-              ]
-            }
-          },
-          managedRuleGroupConfigs: [
-            {
-              awsManagedRulesAtpRuleSet: {
-                loginPath: '/api/login',
-                requestInspection: {
-                  passwordField: {
-                    identifier: '/password',
-                  },
-                  payloadType: 'JSON',
-                  usernameField: {
-                    identifier: '/username',
-                  },
-                },
-                responseInspection: {
-                  statusCode: {
-                    successCodes: [200],
-                    failureCodes: [401]
-                  }
-                }
-              }
-            }
-          ]
-        },
-      },
-      overrideAction: { none: {} },
-      visibilityConfig: {
-        sampledRequestsEnabled: true,
-        cloudWatchMetricsEnabled: true,
-        metricName: "MANAGED_account-takover-prevention-login-api",
-      },
-    }
-  },
-  {
-    Rule: {
-      name: "CUSTOM_block-logins-with-compromised-credentials",
-      priority: 8,
-      action: { block: {} },
-      statement: {
-        labelMatchStatement: {
-          scope: 'LABEL',
-          key: 'awswaf:managed:aws:atp:signal:credential_compromised'
-        }
-      },
-      visibilityConfig: {
-        sampledRequestsEnabled: true,
-        cloudWatchMetricsEnabled: true,
-        metricName: "CUSTOM_block-logins-with-compromised-credentials",
-      },
-    },
-  },
-  {
-    Rule: {
-      name: "MANAGED_fake-account-creation-prevention",
-      priority: 9,
-      statement: {
-        managedRuleGroupStatement: {
-          vendorName: "AWS",
-          name: "AWSManagedRulesACFPRuleSet",
-          scopeDownStatement: {
-            byteMatchStatement: {
-              fieldToMatch: { uriPath: {} },
-              positionalConstraint: "STARTS_WITH",
-              searchString: "/api/register",
-              textTransformations: [
-                {
-                  priority: 0,
-                  type: "LOWERCASE"
-                }
-              ]
-            }
-          },
-          managedRuleGroupConfigs: [
-            {
-              awsManagedRulesAcfpRuleSet: {
-                creationPath: '/api/register',
-                registrationPagePath: '/register',
-                requestInspection: {
-                  passwordField: {
-                    identifier: '/password',
-                  },
-                  payloadType: 'JSON',
-                  usernameField: {
-                    identifier: '/username',
-                  },
-                  phoneNumberFields: [{
-                    identifier: '/phone',
-                  }],
-                  addressFields: [{
-                    identifier: '/address',
-                  }],
-                },
-                responseInspection: {
-                  statusCode: {
-                    successCodes: [200],
-                    failureCodes: [500]
-                  }
-                }
-              }
-            }
-          ]
-        },
-      },
-      overrideAction: { none: {} },
-      visibilityConfig: {
-        sampledRequestsEnabled: true,
-        cloudWatchMetricsEnabled: true,
-        metricName: "MANAGED_fake-account-creation-prevention",
-      },
-    }
-  },
-  {
-    Rule: {
-      name: "CUSTOM_block-account-creation-with-medium-volumetricsessionhigh",
-      priority: 10,
-      action: { block: {} },
-      statement: {
-        labelMatchStatement: {
-          scope: 'LABEL',
-          key: 'awswaf:managed:aws:acfp:aggregate:volumetric:session:creation:medium'
-        }
-      },
-      visibilityConfig: {
-        sampledRequestsEnabled: true,
-        cloudWatchMetricsEnabled: true,
-        metricName: "CUSTOM_block-account-creation-with-medium-volumetricsessionhigh",
-      },
-    },
-  },
-];
 
 export class StoreInfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -452,12 +57,7 @@ export class StoreInfraStack extends cdk.Stack {
             [usersTable.tableName]: [
               {
                 PutRequest: {
-                  Item: {
-                    username: { S: 'demo' },
-                    phone: { S: '00971546352343' },
-                    password: { S: 'demo' },
-                    address: { S: 'where all demos live on AWS' },
-                  }
+                  Item: defaultUser,
                 }
               }
 
@@ -493,7 +93,7 @@ export class StoreInfraStack extends cdk.Stack {
       autoDeleteObjects: true,
       lifecycleRules: [
         {
-          expiration: cdk.Duration.days(parseInt(S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION)),
+          expiration: cdk.Duration.days(stackConfig.S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION),
         },
       ],
     });
@@ -503,11 +103,11 @@ export class StoreInfraStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('functions/image-processing-lambda'),
-      timeout: cdk.Duration.seconds(LAMBDA_TIMEOUT),
-      memorySize: parseInt(LAMBDA_MEMORY),
+      timeout: cdk.Duration.seconds(stackConfig.LAMBDA_TIMEOUT),
+      memorySize: stackConfig.LAMBDA_MEMORY,
       environment: {
         originalImageBucketName: originalImageBucket.bucketName,
-        transformedImageCacheTTL: S3_TRANSFORMED_IMAGE_CACHE_TTL,
+        transformedImageCacheTTL: stackConfig.S3_TRANSFORMED_IMAGE_CACHE_TTL,
         transformedImageBucketName: transformedImageBucket.bucketName
       },
       logRetention: cdk.aws_logs.RetentionDays.ONE_DAY,
@@ -623,7 +223,7 @@ export class StoreInfraStack extends cdk.Stack {
         metricName: "RecycleBinBoutiqueACL",
         sampledRequestsEnabled: true,
       },
-      rules: wafDefaultRules.map((wafRule) => wafRule.Rule),
+      rules: wafRules,
     });
 
     // Get the url used for the Client side javascript integration
@@ -653,9 +253,9 @@ export class StoreInfraStack extends cdk.Stack {
       'sudo apt-get install -y nodejs',
       'sudo npm install -g npm@latest',
       'sudo npm install pm2 -g',
-      `git clone ${GITHUB_REPO}`,
+      `git clone ${stackConfig.GITHUB_REPO}`,
       'cd recycle-bin-boutique/store-app',
-      `echo '{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${SECRET_KEY}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js"}' > aws-backend-config.json`,
+      `echo '{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${createHash('md5').update(this.node.addr).digest('hex')}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js"}' > aws-backend-config.json`,
       'npm install',
       'npm run build',
       'pm2 start npm --name nextjs-app -- run start -- -p 3000'
