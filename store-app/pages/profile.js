@@ -1,8 +1,8 @@
-import { isAuthenticated } from '../../utils/auth';
+import { isAuthenticated } from '../utils/auth';
 import { DynamoDBClient, GetItemCommand } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { unmarshall } from '@aws-sdk/util-dynamodb'
-import config from '../../aws-backend-config.json';
+import config from '../aws-backend-config.json';
 
 // Initialize the DynamoDB client
 const client = new DynamoDBClient({
