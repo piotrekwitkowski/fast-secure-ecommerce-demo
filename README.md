@@ -72,19 +72,24 @@ fields @timestamp, @message
 | limit 20
 ```
 
+# Work in progress WIP
 
-# TODO / Roadmap
-* Use cloudshell
-* Impact of captcha on journey
-* Add captcha scenario with VPN
-* Observability
-* Change the narration to do use case build up
-* Refactor nextjs app code
-* Add ico icon
-* Script to generate data and populate the store
-* Managing cart actions
-* Trace ID page
-* A/B testing  with rule engine
-* caching of landing page for non logged users
+## Improve scenarios
+* Use cloudshell when possible
+* Change VPN scnenario to Captcha
+* Reduce impact of random Captcha on loading pages (e.g. broken images)
+* Evolve narration to to do build ups (attack scenarios, or performance improvement)
+  
+## Add scenarios  
+* Observability: Logs for WAF and CloudFront, CloudWatch Metrics (+ enable additional ones), Server timing headers
 * HTTP redirections
 * Graceful failover
+* WAF Trace ID page
+
+## Improve code 
+* Refactor nextjs app code
+* Add ico icon
+* Generate intial data using GenAI
+* Add cart action
+* Caching of home page for non logged users
+
