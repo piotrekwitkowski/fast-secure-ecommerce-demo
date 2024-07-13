@@ -111,17 +111,19 @@ export class StoreInfraStack extends cdk.Stack {
       )
     });
 
+    const rumApplicationName = 'RecyleBinBoutiqueRUM';
+
     cwRumUnauthenticatedRole.addToPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
         "rum:PutRumEvents"
       ],
       resources: [
-        `arn:aws:rum:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:appmonitor/recylebinboutique`
+        `arn:aws:rum:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:appmonitor/${rumApplicationName}`
       ]
     }));
 
-    const cwRumIdentityPoolRoleAttachment = new cognito.CfnIdentityPoolRoleAttachment(this,
+    new cognito.CfnIdentityPoolRoleAttachment(this,
       'cw-rum-identity-pool-role-attachment',
       {
         identityPoolId: cwRumIdentityPool.ref,
@@ -130,9 +132,9 @@ export class StoreInfraStack extends cdk.Stack {
         }
       });
 
-    const cfnAppMonitor = new cdk.aws_rum.CfnAppMonitor(this, 'MyCfnAppMonitor', {
+    new cdk.aws_rum.CfnAppMonitor(this, 'MyCfnAppMonitor', {
       domain: 'www.dummy.com',
-      name: 'RecyleBonBoutiqueRUM',
+      name: rumApplicationName,
       appMonitorConfiguration: {
         allowCookies: true,
         enableXRay: false,
@@ -260,7 +262,7 @@ export class StoreInfraStack extends cdk.Stack {
       '/aws/service/canonical/ubuntu/server/focal/stable/current/amd64/hvm/ebs-gp2/ami-id',
       { os: ec2.OperatingSystemType.LINUX }
     );
-    const instance = new ec2.Instance(this, 'store_backend_ec2', {
+    const instance = new ec2.Instance(this, 'store_backend_ec', {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.SMALL),
       machineImage: ubuntu,
       vpc,
@@ -309,7 +311,7 @@ export class StoreInfraStack extends cdk.Stack {
         service: 'RUM',
         action: 'GetAppMonitor',
         parameters: {
-          Name: 'RecyleBonBoutiqueRUM',
+          Name: rumApplicationName,
         },
         physicalResourceId: PhysicalResourceId.of('RumParameters'), 
       },
@@ -434,7 +436,7 @@ export class StoreInfraStack extends cdk.Stack {
         action: 'UpdateAppMonitor',
         parameters: {
           Domain: cdn.distributionDomainName,
-          Name: 'RecyleBonBoutiqueRUM',
+          Name: rumApplicationName,
           AppMonitorConfiguration: {
             AllowCookies: true,
             EnableXRay: false,
