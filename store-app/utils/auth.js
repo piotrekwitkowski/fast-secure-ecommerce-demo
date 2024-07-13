@@ -1,5 +1,6 @@
 import { verify } from 'jsonwebtoken';
 import config from '../aws-backend-config.json';
+import Cookies from 'js-cookie';
 
 const SECRET_KEY = config.login_secret_key; // In a real app, use an environment variable
 
@@ -22,7 +23,7 @@ export function isAuthenticated(req) {
 // Client-side authentication check
 export function isLoggedIn() {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
+    const token =  Cookies.get("token"); //localStorage.getItem('token');
     return !!token;
   }
   return false;
@@ -31,9 +32,17 @@ export function isLoggedIn() {
 // Client-side logout function
 export function logout() {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('token');
+    Cookies.remove("token");//localStorage.removeItem('token');
     localStorage.removeItem('username');
   }
+}
+
+// Client-side login function
+export function login(username, token) {
+
+    localStorage.setItem('username', username);
+    Cookies.set('token', token);
+
 }
 
 // Client-side get the name of the user
