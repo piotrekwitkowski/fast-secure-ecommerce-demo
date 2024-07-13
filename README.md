@@ -51,7 +51,7 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 |:------------- |:--------------- | :-------------|
 | **Image optimization** | Verfiy images are resized and format is optimized| NextJS Image component automatically selects the size of the image. Resize the browser and verify that the returned image size has changed. Verify that webp format is detected and returned autmatically. | 
 | **A/B testing** | Return different versions of the home pages to users| Load the home page, and verify in the cookies to which segment you have been assigned to. Then, create an experiment for this segment in the deployed KeyValueStore, using the following config, and validate that you are receicing a different version of the home page <br/> Key: ```9-/``` with 9 being the assigned user segment <br/> Value: ```{"uri":"/index-v2", "countries":"FR,UK,AE"}```| 
-
+| **Observability - RUM** | Analyze RUM performance data| Check CloudWatch RUM telemetry, and check the CloudWatch RUM console for more visibility on Core WebVitals  | 
 
 
 # Troubleshooting
@@ -83,7 +83,6 @@ fields @timestamp, @message
 * Add ico icon
 * Script to generate data and populate the store
 * Managing cart actions
-* RUM
 * Trace ID page
 * A/B testing  with rule engine
 * caching of landing page for non logged users
