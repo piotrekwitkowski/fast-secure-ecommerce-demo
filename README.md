@@ -95,5 +95,4 @@ fields @timestamp, @message
 * Add ico icon
 * Generate intial data using GenAI
 * Add cart action
-* Caching of home page for non logged users
 
