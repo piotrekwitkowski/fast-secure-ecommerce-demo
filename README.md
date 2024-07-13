@@ -22,7 +22,7 @@ The backend includes:
 
 It is exposed to the internet through CloudFront and protected with AWS WAF.
 
-![](rbb-architecture.png)
+![](rbb-diag.png)
 
 
 # Edge security testing scenarios
