@@ -367,15 +367,31 @@ export class StoreInfraStack extends cdk.Stack {
       protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
     });
 
+    const responseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, 'ResponseHeadersPolicy', {
+      responseHeadersPolicyName: 'RecycleBinBoutiqueRHP',
+      comment: 'A default policy for the Recycle Bin Boutique',
+      securityHeadersBehavior: {
+        contentSecurityPolicy: { contentSecurityPolicy: 'default-src https:;', override: true },
+        contentTypeOptions: { override: true },
+        frameOptions: { frameOption: cloudfront.HeadersFrameOption.DENY, override: true },
+        referrerPolicy: { referrerPolicy: cloudfront.HeadersReferrerPolicy.NO_REFERRER, override: true },
+        strictTransportSecurity: { accessControlMaxAge: cdk.Duration.seconds(600), includeSubdomains: true, override: true },
+        xssProtection: { protection: true, modeBlock: true, override: true },
+      },
+      serverTimingSamplingRate: 100,
+    });
+
     const cdn = new cloudfront.Distribution(this, 'store-cdn', {
       comment: 'CloudFront to serve the Recycle Bin Boutique',
       webAclId: webACL.attrArn,
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
+      publishAdditionalMetrics: true,
       defaultBehavior: {
         origin: backendOrigin,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
         originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_AND_CLOUDFRONT_2022, //TODO could break with ALB
+        responseHeadersPolicy: responseHeadersPolicy,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
         functionAssociations: [{
           eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
@@ -388,6 +404,20 @@ export class StoreInfraStack extends cdk.Stack {
         ],
       },
       additionalBehaviors: {
+        '*.css': {
+          origin: backendOrigin,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_AND_CLOUDFRONT_2022, //TODO could break with ALB
+          responseHeadersPolicy: responseHeadersPolicy
+        },
+        '*.js': {
+          origin: backendOrigin,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_AND_CLOUDFRONT_2022, //TODO could break with ALB
+          responseHeadersPolicy: responseHeadersPolicy
+        },
         '/images/*': {
           origin: new cforigins.OriginGroup({
             primaryOrigin: new cforigins.S3Origin(transformedImageBucket),
@@ -396,6 +426,8 @@ export class StoreInfraStack extends cdk.Stack {
           }),
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED_FOR_UNCOMPRESSED_OBJECTS,
+          responseHeadersPolicy: responseHeadersPolicy,
+          compress: false,
           functionAssociations: [{
             eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
             function: imageURLformatting,
@@ -406,7 +438,9 @@ export class StoreInfraStack extends cdk.Stack {
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          responseHeadersPolicy: responseHeadersPolicy,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          compress: false,
         },
       },
 
