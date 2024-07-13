@@ -75,6 +75,7 @@ fields @timestamp, @message
 
 # TODO / Roadmap
 * Use cloudshell
+* Impact of captcha on journey
 * Add captcha scenario with VPN
 * Observability
 * Change the narration to do use case build up
