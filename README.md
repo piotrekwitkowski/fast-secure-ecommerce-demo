@@ -89,6 +89,7 @@ fields @timestamp, @message
 
 ## Improve code 
 * Refactor nextjs app code
+* Caching css/js
 * Understand why server is stopping after some time
 * Add ico icon
 * Generate intial data using GenAI
