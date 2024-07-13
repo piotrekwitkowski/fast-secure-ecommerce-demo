@@ -2,7 +2,7 @@ import '../styles/globals.css'
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { AwsRum } from 'aws-rum-web';
-import config from '../../aws-backend-config.json';
+import config from '../aws-backend-config.json';
 
 try {
   const rumConfig = {
