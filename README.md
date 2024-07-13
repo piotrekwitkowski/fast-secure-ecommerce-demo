@@ -94,5 +94,4 @@ fields @timestamp, @message
 * Understand why server is stopping after some time
 * Add ico icon
 * Generate intial data using GenAI
-* Add cart action
 
