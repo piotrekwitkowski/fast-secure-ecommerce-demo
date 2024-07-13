@@ -8,7 +8,7 @@ function randomIntFromInterval(min, max) { // min and max included
 async function handler(event) {
     const request = event.request;
     const headers = request.headers;
-    // check the user is already assigned to a segment, otherwise assign it to a random one
+    // check the user is already assigned to a segment, otherwise assign it to a random one. This is for A/B testing.
     var userSegment;
     if (request.cookies['user-segment']) {
         userSegment = request.cookies['user-segment'].value;
@@ -16,22 +16,50 @@ async function handler(event) {
         userSegment = `${randomIntFromInterval(1, 10)}`;
         request.headers['x-user-segment'] = { value: userSegment };
     }
+    // apply rules
     try {
-        const lookupKey = `${userSegment}-${request.uri}`;
-        const configRaw = await kvsHandle.get(lookupKey);
+        const configRaw = await kvsHandle.get(request.uri);
         const config = JSON.parse(configRaw);
-        if (config.countries) {
-            console.log("conuntries exist");
-            if ((config.uri) && (headers['cloudfront-viewer-country']) && (config.countries.includes(headers['cloudfront-viewer-country'].value))) {
-                request.uri = config.uri;
+
+        /* example of config
+        {
+            "segments" : "1,2,3,4,5,6",
+            "countries" : "AE,FR",
+            "rules": {
+                "rewrite_path" : "/index-v2"
             }
-        } else  if (config.uri) {
-            request.uri = config.uri;
         }
+        {
+            "segments" : "all",
+            "rules": {
+                "redirect" : "/"
+            }
+        }
+        */
+        const segmentCondition = (!config.segments) || ((config.segments) && ((config.segments === "all") || (config.segments.includes(userSegment))));
+        const countryCondition = (!config.countries) || ((config.countries) && (headers['cloudfront-viewer-country']) && (config.countries.includes(headers['cloudfront-viewer-country'].value)));
+
+        if (segmentCondition && countryCondition) {
+            if (config.rules) {
+                if (config.rules.rewrite_path) {
+                    request.uri = config.rules.rewrite_path;
+                    return request;
+                } else if (config.rules.redirect) {
+                    return {
+                        statusCode: 302,
+                        statusDescription: 'Found',
+                        headers: { location: { value: config.rules.redirect} },
+                    }
+                }
+            }
+
+        }
+        return request; // move forward with request normally
+
     } catch (err) {
         console.log(err);
-        // don't apply rules
+        return request; // move forward with request normally
     }
 
-    return request;
+    
 }
