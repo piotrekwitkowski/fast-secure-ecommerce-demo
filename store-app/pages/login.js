@@ -1,92 +1,98 @@
 import Layout from './components/Layout';
-import Image from 'next/image'
-import { getCartItems, deleteCartItems } from '../utils/cart';
-import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { isLoggedIn } from '../utils/auth';
+import { login } from '../utils/auth';
 
-export default function Cart() {
-
-  const [cartItems, setCartItems] = useState(null);
-  const [totalPrice, setTotalPrice] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [orderPlaced, setOrderPlaced] = useState(false);
+export default function Login() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
 
-  useEffect(() => {
-    async function fetchItems() {
-      try {
-        const items = getCartItems();
-        setCartItems(items);
-        var price = 0;
-        items.map((item) => (price += item.price));
-        setTotalPrice(price);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
 
-      } catch (err) {
-        setError('Failed to load items. Please try again.');
-        console.error('Items fetch error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-
-
-    fetchItems();
-  }, [router]);
-
-  if (isLoading) {
-    return <Layout><div>Loading...</div></Layout>;
-  }
-
-  if (!cartItems || (cartItems.length === 0)) {
-    if (orderPlaced) {
-      return <Layout><div>Thanks for your order</div></Layout>;
-    } else {
-      return <Layout><div>Cart is empty</div></Layout>;
-    }
-    
-  }
-
-  if (error) {
-    return <Layout><div className="text-red-500">{error}</div></Layout>;
-  }
-
-  async function purchase() {
-    if (!isLoggedIn()) {
-      router.push('/login');
+    // Basic form validation
+    if (!username || !password) {
+      setError('Please enter both username and password');
       return;
     }
-    deleteCartItems();
-    setCartItems();
-    setOrderPlaced(true);
-  }
+
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Login successful
+        login(username, data.token)
+        router.push('/'); // Redirect to home page
+      } else {
+        // Login failed
+        setError(data.message || 'Login failed');
+        document.getElementById("error").innerHTML = error;
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      document.getElementById("error").innerHTML = error;
+      console.error('Login error:', err);
+    }
+  };
 
   return (
     <Layout>
-      { /*<h1 className="text-3xl font-bold mb-6">Products</h1>*/}
-      <div className="grid grid-cols-1 gap-2">
-        {cartItems.map((product) => (
-          <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
-            <div className="p-4 flex flex-row justify-between">
-              <Image src={product.image} alt={product.name} className="object-cover" width={64} height={64} />
-              <h2 className="text-xl font-semibold mb-2">{product.name}</h2>
-              <span className="text-green-600 font-bold">${product.price}</span>
-            </div>
+      <div className="max-w-md mx-auto">
+        <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+          <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
+              Username
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Username"
+              required
+            />
           </div>
-        ))}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
-          <div className="p-4 flex flex-row justify-between">
-            <h2 className="text-xl font-semibold mb-2">Total</h2>
-            <span className="text-green-600 font-bold">${totalPrice}</span>
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+              Password
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="******************"
+              required
+            />
           </div>
-          <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition duration-300" onClick={() => {purchase()}}>
-            Order now
-          </button>
-        </div>
+          <div className="flex items-center justify-between">
+            <button
+              className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              type="submit"
+            >
+              Sign In
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+              <Link href={`/register`} className="py-2 px-2 font-small text-blue-500">Sign up here, if you do not have an account</Link>
+          </div>
+
+        </form>
+        <div id='error' className="flex items-center justify-between text-red-500"/>
       </div>
     </Layout>
   );
 }
-
