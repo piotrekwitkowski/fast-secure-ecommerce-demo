@@ -2,6 +2,8 @@ import Layout from './components/Layout';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
+import Cookies from 'js-cookie';
+import { isLoggedIn, login } from '../utils/auth';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -26,14 +28,11 @@ export default function Login() {
         body: JSON.stringify({ username, password }),
       });
 
-      
-
       const data = await response.json();
 
       if (response.ok) {
         // Login successful
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('username', username);
+        login(username, data.token)
         router.push('/'); // Redirect to home page
       } else {
         // Login failed
@@ -98,6 +97,3 @@ export default function Login() {
     </Layout>
   );
 }
-
-
-
