@@ -53,6 +53,8 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 | **A/B testing** | Return different versions of the home pages to users| Load the home page, and verify in the cookies to which segment you have been assigned to. Then, create an experiment that includes this segment in the deployed KeyValueStore, using the following config, and validate that you are receicing a different version of the home page <br/> Key: ```/``` <br/> Value: ```{ "segments" : "1,2,3,4,5,6", "countries" : "AE,FR", "rules": { "rewrite_path" : "/index-v2" }}```| 
 | **Observability - RUM** | Analyze RUM performance data| Check CloudWatch RUM telemetry, and check the CloudWatch RUM console for more visibility on Core WebVitals  | 
 | **HTTP redirection** | Redirect obselete links| Load this non existing campaign page ```/oldCampaign```. Verify that 404 is returned. Add the following http redirection rule to the deployed KeyValueStore, then validate that you are redirected to home page. <br/> Key: ```/oldCampaign``` <br/> Value: ```{ "rules": { "redirect" : "/" }}```| 
+| **Observability - Server Timing Header** | Understand Server timing headers sent by CloudFront| Check this header on the home page response, and generate a new image size and check how the header value is incremented | 
+| **Brotli compression** | Compress JS/CSS/HTML| TBD | 
 
 
 # Troubleshooting
@@ -82,14 +84,13 @@ fields @timestamp, @message
 * Evolve narration to to do build ups (attack scenarios, or performance improvement)
   
 ## Add scenarios  
-* Observability: Logs for WAF and CloudFront, CloudWatch Metrics (+ enable additional ones), Server timing headers
-* HTTP redirections
+* Observability: Logs for WAF and CloudFront, CloudWatch Metrics
 * Graceful failover
 * WAF Trace ID page
+* SQLi / XSS
 
 ## Improve code 
 * Refactor nextjs app code
-* Caching css/js
 * Understand why server is stopping after some time
 * Add ico icon
 * Generate intial data using GenAI
