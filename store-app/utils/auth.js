@@ -1,12 +1,28 @@
 import { verify } from 'jsonwebtoken';
 import config from '../aws-backend-config.json';
-import Cookies from 'js-cookie';
+import Cookies from 'js-cookie';  // replace with https://nextjs.org/docs/app/api-reference/functions/cookies 
+import {deleteCartItems} from './cart'
 
 const SECRET_KEY = config.login_secret_key; // In a real app, use an environment variable
 
 export function isAuthenticated(req) {
-  const token = req.headers.authorization?.split(' ')[1];
-  
+  const list = {};
+  const cookieHeader = req.headers?.cookie
+
+  if (!cookieHeader) return false;
+
+  cookieHeader.split(`;`).forEach(function(cookie) {
+    let [ name, ...rest] = cookie.split(`=`);
+    name = name?.trim();
+    if (!name) return;
+    const value = rest.join(`=`).trim();
+    if (!value) return;
+    list[name] = decodeURIComponent(value);
+  });
+
+  const token = list.token;
+  console.log(token);
+
   if (!token) {
     return false;
   }
@@ -23,7 +39,7 @@ export function isAuthenticated(req) {
 // Client-side authentication check
 export function isLoggedIn() {
   if (typeof window !== 'undefined') {
-    const token =  Cookies.get("token"); //localStorage.getItem('token');
+    const token =  Cookies.get("token"); 
     return !!token;
   }
   return false;
@@ -32,8 +48,9 @@ export function isLoggedIn() {
 // Client-side logout function
 export function logout() {
   if (typeof window !== 'undefined') {
-    Cookies.remove("token");//localStorage.removeItem('token');
+    Cookies.remove("token");
     localStorage.removeItem('username');
+    deleteCartItems();
   }
 }
 
@@ -52,4 +69,12 @@ export function getUsername() {
     return localStorage.getItem('username') || 'Unknown';
   }
   return 'Unknown';
+}
+
+// Client-side get the token value
+export function getToken() {
+  if (typeof window !== 'undefined') {
+    return Cookies.get("token"); 
+  }
+  return "";
 }

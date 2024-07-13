@@ -1,65 +1,44 @@
-import { useState, useEffect } from 'react';
-import Layout from './components/Layout';
-import { useRouter } from 'next/router';
-import { isLoggedIn, getUsername } from '../utils/auth';
+import { isAuthenticated } from '../../utils/auth';
+import { DynamoDBClient, GetItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
+import { unmarshall } from '@aws-sdk/util-dynamodb'
+import config from '../../aws-backend-config.json';
 
-export default function Profile() {
-  const [profile, setProfile] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const router = useRouter();
+// Initialize the DynamoDB client
+const client = new DynamoDBClient({
+  region: config.aws_region,
+});
 
-  useEffect(() => {
-    if (!isLoggedIn()) {
-      router.push('/login');
-      return;
-    }
+const docClient = DynamoDBDocumentClient.from(client);
 
-    async function fetchProfile() {
-      try {
-        const response = await fetch('/api/profile?username='+getUsername(), {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
 
-        if (!response.ok) {
-          throw new Error('Failed to fetch profile');
-        }
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).end(); // Method Not Allowed
+  }
 
-        const data = await response.json();
-        setProfile(data);
-      } catch (err) {
-        setError('Failed to load profile. Please try again.');
-        console.error('Profile fetch error:', err);
-      } finally {
-        setIsLoading(false);
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  const username = req.query.username;
+
+  const command = new GetItemCommand({
+    'TableName': config.users_ddb_table,
+    'Key': {
+      'username' : {
+        'S': username
       }
     }
+  });
 
-    fetchProfile();
-  }, [router]);
+  const response = await docClient.send(command);
 
-  if (isLoading) {
-    return <Layout><div>Loading...</div></Layout>;
+  if (response.Item) {
+    res.status(200).json(unmarshall(response.Item));
+  } else {
+    res.status(401).json({ message: 'User not found' });
   }
 
-  if (error) {
-    return <Layout><div className="text-red-500">{error}</div></Layout>;
-  }
 
-  return (
-    <Layout>
-      <div className="max-w-md mx-auto bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h1 className="text-2xl font-bold mb-6 text-center">User Profile</h1>
-        {profile && (
-          <div>
-            <p className="mb-4"><strong>Name:</strong> {profile.username}</p>
-            <p className="mb-4"><strong>Phone:</strong> {profile.phone}</p>
-            <p className="mb-4"><strong>Address:</strong> {profile.address}</p>
-          </div>
-        )}
-      </div>
-    </Layout>
-  );
 }

@@ -1,16 +1,19 @@
 import Layout from './../components/Layout';
 import Image from 'next/image'
-
-//import { useRouter } from 'next/router';
+import { addItem } from '../../utils/cart';
+import { useRouter } from 'next/router';
 
 export default function Product({ product }) {
-  /*const router = useRouter();
+  const router = useRouter();
 
   if (router.isFallback) {
     return <div>Loading...</div>;
-  }*/
+  }
 
-  const imageParentFolder = '../../';
+  function addItemToCart(id, price) {
+    addItem(id, price);
+    router.push('/');
+  }
 
   return (
     <Layout>
@@ -20,7 +23,7 @@ export default function Product({ product }) {
           <Image src={product.image} alt={product.name} className="w-full h-full object-cover" layout="responsive" width={640} height={640} />
           <p className="text-gray-600 mb-4">{product.description}</p>
           <p className="text-2xl font-bold text-green-600 mb-4">${product.price}</p>
-          <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition duration-300">
+          <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition duration-300" onClick={() => {addItemToCart(product)}}>
             Add to Cart
           </button>
         </div>

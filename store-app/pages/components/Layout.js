@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { isLoggedIn, logout, getUsername } from '../../utils/auth';
+import { getCartCount } from '../../utils/cart';
 import Script from 'next/script'
 import config from '../../aws-backend-config.json';
 
@@ -39,12 +40,18 @@ export default function Layout({ children }) {
                     <Link className="py-2 px-2 flex items-center font-medium text-gray-500 rounded hover:bg-green-500 hover:text-white transition duration-300"href="/profile">
                       Ciao {getUsername()} !
                     </Link>
+                    <Link className="py-2 px-2 flex items-center font-medium text-gray-500 rounded hover:bg-green-500 hover:text-white transition duration-300"href="/cart">
+                      Cart {getCartCount()}
+                    </Link>
                     <button onClick={handleLogout} className="py-2 px-2 font-medium text-gray-500 rounded hover:bg-red-500 hover:text-white transition duration-300">
                       Log Out
                     </button>
                 </div>
               ) : (
-                <div>
+                <div className="flex justify-between">
+                    <Link className="py-2 px-2 flex items-center font-medium text-gray-500 rounded hover:bg-green-500 hover:text-white transition duration-300"href="/cart">
+                      Cart {getCartCount()}
+                    </Link>
                     <Link className="py-2 px-2 flex items-center font-medium text-gray-500 rounded hover:bg-green-500 hover:text-white transition duration-300"href="/login">
                       Log in
                     </Link>
