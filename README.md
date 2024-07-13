@@ -54,7 +54,7 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 | **Observability - RUM** | Analyze RUM performance data| Check CloudWatch RUM telemetry, and check the CloudWatch RUM console for more visibility on Core WebVitals  | 
 | **HTTP redirection** | Redirect obselete links| Load this non existing campaign page ```/oldCampaign```. Verify that 404 is returned. Add the following http redirection rule to the deployed KeyValueStore, then validate that you are redirected to home page. <br/> Key: ```/oldCampaign``` <br/> Value: ```{ "rules": { "redirect" : "/" }}```| 
 | **Observability - Server Timing Header** | Understand Server timing headers sent by CloudFront| Check this header on the home page response, and generate a new image size and check how the header value is incremented | 
-| **Brotli compression** | Compress JS/CSS/HTML| TBD | 
+| **Brotli compression** | Compress JS/CSS/HTML| Verify brotli compression on page text resources | 
 
 
 # Troubleshooting
