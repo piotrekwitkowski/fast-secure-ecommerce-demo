@@ -75,6 +75,11 @@ fields @timestamp, @message
 | limit 20
 ```
 
+# Request flow
+
+![](rbb-flow.png)
+
+
 # Work in progress WIP
 
 ## Improve scenarios
