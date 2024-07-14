@@ -66,9 +66,9 @@ export function login(username, token) {
 export function getUsername() {
   if (typeof window !== 'undefined') {
      ;
-    return localStorage.getItem('username') || 'Unknown';
+    return localStorage.getItem('username') || '';
   }
-  return 'Unknown';
+  return '';
 }
 
 // Client-side get the token value

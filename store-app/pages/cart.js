@@ -3,7 +3,8 @@ import Image from 'next/image'
 import { getCartItems, deleteCartItems } from '../utils/cart';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { isLoggedIn } from '../utils/auth';
+import { isLoggedIn, getUsername } from '../utils/auth';
+
 
 export default function Cart() {
 
@@ -32,7 +33,6 @@ export default function Cart() {
     }
 
 
-
     fetchItems();
   }, [router]);
 
@@ -40,13 +40,35 @@ export default function Cart() {
     return <Layout><div>Loading...</div></Layout>;
   }
 
+  const username = getUsername();
+
   if (!cartItems || (cartItems.length === 0)) {
     if (orderPlaced) {
-      return <Layout><div>Thanks for your order</div></Layout>;
+      return <Layout>
+        <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
+          <div class="flex items-center p-6 rounded-lg ">
+            <img src="full-cart.jpeg" alt="Sad ghost in shopping cart" class="w-36 h-36 mr-6" />
+            <div>
+              <h2 class="font-sans text-2xl font-bold text-gray-800 mb-2">{username}, thanks for your order :)</h2>
+              <p class="font-sans text-lg text-gray-600">Your shipment is on the way!</p>
+            </div>
+          </div>
+        </div>
+      </Layout>;
     } else {
-      return <Layout><div>Cart is empty</div></Layout>;
+      return <Layout>
+        <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
+          <div class="flex items-center p-6 rounded-lg ">
+            <img src="empty-cart.jpeg" alt="Sad ghost in shopping cart" class="w-36 h-36 mr-6" />
+            <div>
+              <h2 class="font-sans text-2xl font-bold text-gray-800 mb-2">{(username != '') ? username + ', your' : 'Your'} cart is empty :(</h2>
+              <p class="font-sans text-lg text-gray-600">Please add some stuff to it!</p>
+            </div>
+          </div>
+        </div>
+      </Layout>;
     }
-    
+
   }
 
   if (error) {
@@ -61,32 +83,33 @@ export default function Cart() {
     deleteCartItems();
     setCartItems();
     setOrderPlaced(true);
+    setTimeout(() => router.push('/'), 4000);
   }
 
-  return (
-    <Layout>
-      { /*<h1 className="text-3xl font-bold mb-6">Products</h1>*/}
-      <div className="grid grid-cols-1 gap-2">
-        {cartItems.map((product) => (
-          <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
-            <div className="p-4 flex flex-row justify-between">
-              <Image src={product.image} alt={product.name} className="object-cover" width={64} height={64} />
-              <h2 className="text-xl font-semibold mb-2">{product.name}</h2>
-              <span className="text-green-600 font-bold">${product.price}</span>
-            </div>
-          </div>
-        ))}
+
+return (
+  <Layout>
+    { /*<h1 className="text-3xl font-bold mb-6">Products</h1>*/}
+    <div className="grid grid-cols-1 gap-2">
+      {cartItems.map((product) => (
         <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
           <div className="p-4 flex flex-row justify-between">
-            <h2 className="text-xl font-semibold mb-2">Total</h2>
-            <span className="text-green-600 font-bold">${totalPrice}</span>
+            <Image src={product.image} alt={product.name} className="object-cover" width={64} height={64} />
+            <h2 className="text-xl font-semibold mb-2">{product.name}</h2>
+            <span className="text-green-600 font-bold">${product.price}</span>
           </div>
-          <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition duration-300" onClick={() => {purchase()}}>
-            Order now
-          </button>
         </div>
+      ))}
+      <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
+        <div className="p-4 flex flex-row justify-between">
+          <h2 className="text-xl font-semibold mb-2">Total</h2>
+          <span className="text-green-600 font-bold">${totalPrice}</span>
+        </div>
+        <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition duration-300" onClick={() => { purchase() }}>
+          Order now
+        </button>
       </div>
-    </Layout>
-  );
+    </div>
+  </Layout>
+);
 }
-
