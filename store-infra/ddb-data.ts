@@ -13,8 +13,8 @@ export const products = [
 
 export const defaultUser =
     {
-        username: { S: 'demo' },
-        phone: { S: '00971546352343' },
+        username: { S: 'Achraf' },
+        phone: { S: '+971546352343' },
         password: { S: 'demo' },
-        address: { S: 'where all demos live on AWS' },
+        address: { S: 'Marina, Dubai, UAE' },
     } as const;
