@@ -83,21 +83,25 @@ fields @timestamp, @message
 # Work in progress WIP
 
 ## Improve scenarios
+* Review Scnarios holisitcally, and evolve narration to to do build ups (attack scenarios, or performance improvement)
 * Use cloudshell when possible
 * Change VPN scnenario to Captcha
 * Reduce impact of random Captcha on loading pages (e.g. broken images)
-* Evolve narration to to do build ups (attack scenarios, or performance improvement)
   
 ## Add scenarios  
-* Observability: Logs for WAF and CloudFront, CloudWatch Metrics
-* Graceful failover
-* WAF Trace ID page
-* SQLi / XSS
+* Observability: WAF logs in CloudWatch logs, Athena for CloudFront logs, CloudWatch Metrics
+* Graceful failover when origin not responding
+* OWASP relatd attack
+* Waiting room
+* Report false positive page
 
 ## Improve code 
-* Refactor nextjs app code
-* Add ALB
-* Generate key dynamically
+* Refactor nextjs app code (images, state, storage, router, apis, etc..)
+* Add ALB in front of EC2s.
+* Generate secret key dynamically with CDK.
+* Improve caching: Origin shield, review caching rules holisitcally
+* Inforce origin cloaking at L7
 * Understand why server is stopping after some time
 * Generate intial data using GenAI
+* Low latency treaming video
 
