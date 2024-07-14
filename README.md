@@ -97,6 +97,6 @@ fields @timestamp, @message
 ## Improve code 
 * Refactor nextjs app code
 * Understand why server is stopping after some time
-* Add ico icon
+* Add ico icon (VERIFY)
 * Generate intial data using GenAI
 
