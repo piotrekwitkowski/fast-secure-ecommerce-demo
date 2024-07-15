@@ -105,3 +105,4 @@ fields @timestamp, @message
 * Generate intial data using GenAI
 * Low latency treaming video
 * GenAI search bar
+* Speculation API
