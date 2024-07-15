@@ -94,6 +94,7 @@ fields @timestamp, @message
 * OWASP relatd attack
 * Waiting room
 * Report false positive page
+* SEO verified
 
 ## Improve code 
 * Refactor nextjs app code (images, state, storage, router, apis, etc..)
