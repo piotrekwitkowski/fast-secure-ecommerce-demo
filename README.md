@@ -104,4 +104,4 @@ fields @timestamp, @message
 * Understand why server is stopping after some time
 * Generate intial data using GenAI
 * Low latency treaming video
-
+* GenAI search bar
