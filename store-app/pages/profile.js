@@ -37,7 +37,13 @@ export default function Profile() {
   }, [router]);
 
   if (isLoading) {
-    return <Layout><div>Loading...</div></Layout>;
+    return (
+      <Layout>
+        <div className="max-w-md mx-auto bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+          <h1 className="text-2xl font-bold mb-6 text-center">◵ Loading...</h1>
+        </div>
+      </Layout>
+    );
   }
 
   if (error) {
