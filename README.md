@@ -89,7 +89,7 @@ fields @timestamp, @message
 * Reduce impact of random Captcha on loading pages (e.g. broken images)
   
 ## Add scenarios  
-* Observability: WAF logs in CloudWatch logs, Athena for CloudFront logs, CloudWatch Metrics
+* Observability: WAF logs in CloudWatch logs, Athena for CloudFront logs, CloudWatch Metrics. RUM + SERVER TIMING integration
 * Graceful failover when origin not responding
 * OWASP relatd attack
 * Waiting room
