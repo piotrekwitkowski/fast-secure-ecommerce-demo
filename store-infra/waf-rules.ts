@@ -1,36 +1,36 @@
 import * as waf from "aws-cdk-lib/aws-wafv2";
 
-export const wafRules: waf.CfnWebACL.RuleProperty[] = [
+export const wafRules = [
 
   {
-    name: "CUSTOM_reduce-surface-attack-apis",
-    priority: 1,
-    action: { block: {} },
-    statement: {
-      orStatement: {
-        statements: [
+    Name: "CUSTOM_reduce-surface-attack-apis",
+    Priority: 1,
+    Action: { Block: {} },
+    Statement: {
+      OrStatement: {
+        Statements: [
           {
-            byteMatchStatement: {
-              fieldToMatch: { uriPath: {} },
-              positionalConstraint: "STARTS_WITH",
-              searchString: "/api/product",
-              textTransformations: [
+            ByteMatchStatement: {
+              FieldToMatch: { UriPath: {} },
+              PositionalConstraint: "STARTS_WITH",
+              SearchString: "/api/product",
+              TextTransformations: [
                 {
-                  priority: 0,
-                  type: "LOWERCASE"
+                  Priority: 0,
+                  Type: "LOWERCASE"
                 }
               ]
             }
           },
           {
-            byteMatchStatement: {
-              fieldToMatch: { uriPath: {} },
-              positionalConstraint: "STARTS_WITH",
-              searchString: "/api/products",
-              textTransformations: [
+            ByteMatchStatement: {
+              FieldToMatch: { UriPath: {} },
+              PositionalConstraint: "STARTS_WITH",
+              SearchString: "/api/products",
+              TextTransformations: [
                 {
-                  priority: 0,
-                  type: "LOWERCASE"
+                  Priority: 0,
+                  Type: "LOWERCASE"
                 }
               ]
             }
@@ -39,169 +39,183 @@ export const wafRules: waf.CfnWebACL.RuleProperty[] = [
       }
 
     },
-    visibilityConfig: {
-      sampledRequestsEnabled: true,
-      cloudWatchMetricsEnabled: true,
-      metricName: "reduce-surface-attack-apis",
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "reduce-surface-attack-apis",
     },
   },
   {
-    name: "MANAGED_malicious-ips-vpn-tor-hosting-providers",
-    priority: 2,
-    statement: {
-      managedRuleGroupStatement: {
-        vendorName: "AWS",
-        name: "AWSManagedRulesAnonymousIpList",
-      },
-    },
-    overrideAction: { none: {} },
-    visibilityConfig: {
-      sampledRequestsEnabled: true,
-      cloudWatchMetricsEnabled: true,
-      metricName: "MANAGED_malicious-ips-vpn-tor-hosting-providers",
-    },
-  },
-  {
-    name: "MANAGED_malicious-ips-ddos-scanners",
-    priority: 3,
-    statement: {
-      managedRuleGroupStatement: {
-        vendorName: "AWS",
-        name: "AWSManagedRulesAmazonIpReputationList",
-        ruleActionOverrides: [
+    Name: "MANAGED_malicious-ips-vpn-tor-hosting-providers",
+    Priority: 2,
+    Statement: {
+      ManagedRuleGroupStatement: {
+        VendorName: "AWS",
+        Name: "AWSManagedRulesAnonymousIpList",
+        RuleActionOverrides: [
           {
-            actionToUse: {
-              block: {}
+            ActionToUse: {
+              Captcha: {}
             },
-            name: 'AWSManagedIPDDoSList'
+            Name: 'AnonymousIPList'
+          },
+          {
+            ActionToUse: {
+              Captcha: {}
+            },
+            Name: 'HostingProviderIPList'
           },
         ]
       },
     },
-    overrideAction: { none: {} },
-    visibilityConfig: {
-      sampledRequestsEnabled: true,
-      cloudWatchMetricsEnabled: true,
-      metricName: "MANAGED_malicious-ips-ddos-scanners",
+    OverrideAction: { None: {} },
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "MANAGED_malicious-ips-vpn-tor-hosting-providers",
     },
   },
   {
-    name: "CUSTOM_rate_limit_IP_400",
-    priority: 4,
-    statement: {
-      rateBasedStatement: {
-        aggregateKeyType: "IP",
-        limit: 400,
-        evaluationWindowSec: 60
+    Name: "MANAGED_malicious-ips-ddos-scanners",
+    Priority: 3,
+    Statement: {
+      ManagedRuleGroupStatement: {
+        VendorName: "AWS",
+        Name: "AWSManagedRulesAmazonIpReputationList",
+        RuleActionOverrides: [
+          {
+            ActionToUse: {
+              Block: {}
+            },
+            Name: 'AWSManagedIPDDoSList'
+          },
+        ]
       },
     },
-    action: {
-      block: {}
-    },
-    visibilityConfig: {
-      sampledRequestsEnabled: true,
-      cloudWatchMetricsEnabled: true,
-      metricName: "BlanketRateLimit",
+    OverrideAction: { None: {} },
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "MANAGED_malicious-ips-ddos-scanners",
     },
   },
   {
-    name: "MANAGED_general_bot_protection",
-    priority: 5,
-    overrideAction: { none: {} },
-    statement: {
-      managedRuleGroupStatement: {
-        vendorName: "AWS",
-        name: "AWSManagedRulesBotControlRuleSet",
-        managedRuleGroupConfigs: [
+    Name: "CUSTOM_rate_limit_IP_400",
+    Priority: 4,
+    Statement: {
+      RateBasedStatement: {
+        AggregateKeyType: "IP",
+        Limit: 400,
+        EvaluationWindowSec: 60
+      },
+    },
+    Action: {
+      Block: {}
+    },
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "BlanketRateLimit",
+    },
+  },
+  {
+    Name: "MANAGED_general_bot_protection",
+    Priority: 5,
+    OverrideAction: { None: {} },
+    Statement: {
+      ManagedRuleGroupStatement: {
+        VendorName: "AWS",
+        Name: "AWSManagedRulesBotControlRuleSet",
+        ManagedRuleGroupConfigs: [
           {
-            awsManagedRulesBotControlRuleSet: { inspectionLevel: "TARGETED" }
+            AWSManagedRulesBotControlRuleSet: { InspectionLevel: "TARGETED" }
           }
         ],
-        ruleActionOverrides: [
+        RuleActionOverrides: [
           {
-            actionToUse: {
-              block: {}
+            ActionToUse: {
+              Block: {}
             },
-            name: "TGT_TokenReuseIp"
+            Name: "TGT_TokenReuseIp"
           },
           {
-            actionToUse: {
-              captcha: {}
+            ActionToUse: {
+              Captcha: {}
             },
-            name: "TGT_ML_CoordinatedActivityHigh"
+            Name: "TGT_ML_CoordinatedActivityHigh"
           },
         ],
       },
     },
-    visibilityConfig: {
-      sampledRequestsEnabled: true,
-      cloudWatchMetricsEnabled: true,
-      metricName: "MANAGED_general_bot_protection",
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "MANAGED_general_bot_protection",
     },
   },
   {
-    name: "CUSTOM_block-requests-to-apis-with-non-valid-tokens",
-    priority: 6,
-    action: { block: {} },
-    statement: {
-      andStatement: {
-        statements: [
+    Name: "CUSTOM_Block-requests-to-apis-with-non-valid-tokens",
+    Priority: 6,
+    Action: { Block: {} },
+    Statement: {
+      AndStatement: {
+        Statements: [
           {
-            orStatement: {
-              statements: [
+            OrStatement: {
+              Statements: [
                 {
-                  labelMatchStatement: {
-                    scope: 'LABEL',
-                    key: 'awswaf:managed:token:absent'
+                  LabelMatchStatement: {
+                    Scope: 'LABEL',
+                    Key: 'awswaf:managed:token:absent'
                   }
                 },
                 {
-                  labelMatchStatement: {
-                    scope: 'LABEL',
-                    key: 'awswaf:managed:token:rejected'
+                  LabelMatchStatement: {
+                    Scope: 'LABEL',
+                    Key: 'awswaf:managed:token:rejected'
                   }
                 }
               ]
             }
           },
           {
-            orStatement: {
-              statements: [
+            OrStatement: {
+              Statements: [
                 {
-                  byteMatchStatement: {
-                    fieldToMatch: { uriPath: {} },
-                    positionalConstraint: "STARTS_WITH",
-                    searchString: "/api/login",
-                    textTransformations: [
+                  ByteMatchStatement: {
+                    FieldToMatch: { UriPath: {} },
+                    PositionalConstraint: "STARTS_WITH",
+                    SearchString: "/api/login",
+                    TextTransformations: [
                       {
-                        priority: 0,
-                        type: "LOWERCASE"
+                        Priority: 0,
+                        Type: "LOWERCASE"
                       }
                     ]
                   }
                 },
                 {
-                  byteMatchStatement: {
-                    fieldToMatch: { uriPath: {} },
-                    positionalConstraint: "STARTS_WITH",
-                    searchString: "/api/register",
-                    textTransformations: [
+                  ByteMatchStatement: {
+                    FieldToMatch: { UriPath: {} },
+                    PositionalConstraint: "STARTS_WITH",
+                    SearchString: "/api/register",
+                    TextTransformations: [
                       {
-                        priority: 0,
-                        type: "LOWERCASE"
+                        Priority: 0,
+                        Type: "LOWERCASE"
                       }
                     ]
                   }
                 },
                 {
-                  byteMatchStatement: {
-                    fieldToMatch: { uriPath: {} },
-                    positionalConstraint: "STARTS_WITH",
-                    searchString: "/api/profile",
-                    textTransformations: [
+                  ByteMatchStatement: {
+                    FieldToMatch: { UriPath: {} },
+                    PositionalConstraint: "STARTS_WITH",
+                    SearchString: "/api/profile",
+                    TextTransformations: [
                       {
-                        priority: 0,
-                        type: "LOWERCASE"
+                        Priority: 0,
+                        Type: "LOWERCASE"
                       }
                     ]
                   }
@@ -213,49 +227,49 @@ export const wafRules: waf.CfnWebACL.RuleProperty[] = [
       }
 
     },
-    visibilityConfig: {
-      sampledRequestsEnabled: true,
-      cloudWatchMetricsEnabled: true,
-      metricName: "CUSTOM_block-requests-to-apis-with-non-valid-tokens",
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "CUSTOM_Block-requests-to-apis-with-non-valid-tokens",
     },
   },
   {
-    name: "MANAGED_account-takover-prevention-login-api",
-    priority: 7,
-    statement: {
-      managedRuleGroupStatement: {
-        vendorName: "AWS",
-        name: "AWSManagedRulesATPRuleSet",
-        scopeDownStatement: {
-          byteMatchStatement: {
-            fieldToMatch: { uriPath: {} },
-            positionalConstraint: "STARTS_WITH",
-            searchString: "/api/login",
-            textTransformations: [
+    Name: "MANAGED_account-takover-prevention-login-api",
+    Priority: 7,
+    Statement: {
+      ManagedRuleGroupStatement: {
+        VendorName: "AWS",
+        Name: "AWSManagedRulesATPRuleSet",
+        ScopeDownStatement: {
+          ByteMatchStatement: {
+            FieldToMatch: { UriPath: {} },
+            PositionalConstraint: "STARTS_WITH",
+            SearchString: "/api/login",
+            TextTransformations: [
               {
-                priority: 0,
-                type: "LOWERCASE"
+                Priority: 0,
+                Type: "LOWERCASE"
               }
             ]
           }
         },
-        managedRuleGroupConfigs: [
+        ManagedRuleGroupConfigs: [
           {
-            awsManagedRulesAtpRuleSet: {
-              loginPath: '/api/login',
-              requestInspection: {
-                passwordField: {
-                  identifier: '/password',
+            AWSManagedRulesATPRuleSet: {
+              LoginPath: '/api/login',
+              RequestInspection: {
+                PasswordField: {
+                  Identifier: '/password',
                 },
-                payloadType: 'JSON',
-                usernameField: {
-                  identifier: '/username',
+                PayloadType: 'JSON',
+                UsernameField: {
+                  Identifier: '/userName',
                 },
               },
-              responseInspection: {
-                statusCode: {
-                  successCodes: [200],
-                  failureCodes: [401]
+              ResponseInspection: {
+                StatusCode: {
+                  SuccessCodes: [200],
+                  FailureCodes: [401]
                 }
               }
             }
@@ -263,73 +277,73 @@ export const wafRules: waf.CfnWebACL.RuleProperty[] = [
         ]
       },
     },
-    overrideAction: { none: {} },
-    visibilityConfig: {
-      sampledRequestsEnabled: true,
-      cloudWatchMetricsEnabled: true,
-      metricName: "MANAGED_account-takover-prevention-login-api",
+    OverrideAction: { None: {} },
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "MANAGED_account-takover-prevention-login-api",
     },
   }
   , {
-    name: "CUSTOM_block-logins-with-compromised-credentials",
-    priority: 8,
-    action: { block: {} },
-    statement: {
-      labelMatchStatement: {
-        scope: 'LABEL',
-        key: 'awswaf:managed:aws:atp:signal:credential_compromised'
+    Name: "CUSTOM_Block-logins-with-compromised-credentials",
+    Priority: 8,
+    Action: { Block: {} },
+    Statement: {
+      LabelMatchStatement: {
+        Scope: 'LABEL',
+        Key: 'awswaf:managed:aws:atp:signal:credential_compromised'
       }
     },
-    visibilityConfig: {
-      sampledRequestsEnabled: true,
-      cloudWatchMetricsEnabled: true,
-      metricName: "CUSTOM_block-logins-with-compromised-credentials",
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "CUSTOM_Block-logins-with-compromised-credentials",
     },
   },
   {
-    name: "MANAGED_fake-account-creation-prevention",
-    priority: 9,
-    statement: {
-      managedRuleGroupStatement: {
-        vendorName: "AWS",
-        name: "AWSManagedRulesACFPRuleSet",
-        scopeDownStatement: {
-          byteMatchStatement: {
-            fieldToMatch: { uriPath: {} },
-            positionalConstraint: "STARTS_WITH",
-            searchString: "/api/register",
-            textTransformations: [
+    Name: "MANAGED_fake-account-creation-prevention",
+    Priority: 9,
+    Statement: {
+      ManagedRuleGroupStatement: {
+        VendorName: "AWS",
+        Name: "AWSManagedRulesACFPRuleSet",
+        ScopeDownStatement: {
+          ByteMatchStatement: {
+            FieldToMatch: { UriPath: {} },
+            PositionalConstraint: "STARTS_WITH",
+            SearchString: "/api/register",
+            TextTransformations: [
               {
-                priority: 0,
-                type: "LOWERCASE"
+                Priority: 0,
+                Type: "LOWERCASE"
               }
             ]
           }
         },
-        managedRuleGroupConfigs: [
+        ManagedRuleGroupConfigs: [
           {
-            awsManagedRulesAcfpRuleSet: {
-              creationPath: '/api/register',
-              registrationPagePath: '/register',
-              requestInspection: {
-                passwordField: {
-                  identifier: '/password',
+            AWSManagedRulesACFPRuleSet: {
+              CreationPath: '/api/register',
+              RegistrationPagePath: '/register',
+              RequestInspection: {
+                PasswordField: {
+                  Identifier: '/password',
                 },
-                payloadType: 'JSON',
-                usernameField: {
-                  identifier: '/username',
+                PayloadType: 'JSON',
+                UserNameField: {
+                  Identifier: '/userName',
                 },
-                phoneNumberFields: [{
-                  identifier: '/phone',
+                PhoneNumberFields: [{
+                  Identifier: '/phone',
                 }],
-                addressFields: [{
-                  identifier: '/address',
+                AddressFields: [{
+                  Identifier: '/address',
                 }],
               },
-              responseInspection: {
-                statusCode: {
-                  successCodes: [200],
-                  failureCodes: [500]
+              ResponseInspection: {
+                StatusCode: {
+                  SuccessCodes: [200],
+                  FailureCodes: [500]
                 }
               }
             }
@@ -337,27 +351,27 @@ export const wafRules: waf.CfnWebACL.RuleProperty[] = [
         ]
       },
     },
-    overrideAction: { none: {} },
-    visibilityConfig: {
-      sampledRequestsEnabled: true,
-      cloudWatchMetricsEnabled: true,
-      metricName: "MANAGED_fake-account-creation-prevention",
+    OverrideAction: { None: {} },
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "MANAGED_fake-account-creation-prevention",
     },
   },
   {
-    name: "CUSTOM_block-account-creation-with-medium-volumetricsessionhigh",
-    priority: 10,
-    action: { block: {} },
-    statement: {
-      labelMatchStatement: {
-        scope: 'LABEL',
-        key: 'awswaf:managed:aws:acfp:aggregate:volumetric:session:creation:medium'
+    Name: "CUSTOM_Block-account-creation-with-medium-volumetricsessionhigh",
+    Priority: 10,
+    Action: { Block: {} },
+    Statement: {
+      LabelMatchStatement: {
+        Scope: 'LABEL',
+        Key: 'awswaf:managed:aws:acfp:aggregate:volumetric:session:creation:medium'
       }
     },
-    visibilityConfig: {
-      sampledRequestsEnabled: true,
-      cloudWatchMetricsEnabled: true,
-      metricName: "CUSTOM_block-account-creation-with-medium-volumetricsessionhigh",
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "CUSTOM_Block-account-creation-with-medium-volumetricsessionhigh",
     },
   }
 ] as const;
