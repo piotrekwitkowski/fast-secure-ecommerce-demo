@@ -263,7 +263,7 @@ export const wafRules = [
                 },
                 PayloadType: 'JSON',
                 UsernameField: {
-                  Identifier: '/userName',
+                  Identifier: '/username',
                 },
               },
               ResponseInspection: {
@@ -331,7 +331,7 @@ export const wafRules = [
                 },
                 PayloadType: 'JSON',
                 UserNameField: {
-                  Identifier: '/userName',
+                  Identifier: '/username',
                 },
                 PhoneNumberFields: [{
                   Identifier: '/phone',
