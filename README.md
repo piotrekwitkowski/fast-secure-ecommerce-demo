@@ -99,11 +99,9 @@ fields @timestamp, @message
 
 ## Improve code 
 * Refactor nextjs app code (images, state, storage, router, apis, etc..)
-* Infra code: CSP, Custom resource lifecycle management, custom resource permissions.
-* Add ALB in front of EC2s.
+* Review Infra code: CSP, Custom resource lifecycle management, custom resource permissions, multiregion, Inforce origin cloaking at L7
 * Generate secret key dynamically with CDK.
 * Improve caching: Origin shield, review caching rules holisitcally
-* Inforce origin cloaking at L7
 * Understand why server is stopping after some time
 * Generate intial data using GenAI
 * Low latency treaming video
