@@ -257,14 +257,10 @@ export class StoreInfraStack extends cdk.Stack {
     productsTable.grantReadWriteData(role);
     usersTable.grantReadWriteData(role);
 
-    // Get the latest Ubuntu AMI and Create the EC2 instance
-    const ubuntu = ec2.MachineImage.fromSsmParameter(
-      '/aws/service/canonical/ubuntu/server/focal/stable/current/amd64/hvm/ebs-gp2/ami-id',
-      { os: ec2.OperatingSystemType.LINUX }
-    );
+    // Create the EC2 instance
     const instance = new ec2.Instance(this, 'store_backend_ec2', {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.SMALL),
-      machineImage: ubuntu,
+      machineImage: ec2.MachineImage.latestAmazonLinux2023(),
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
       securityGroup: securityGroup,
@@ -325,13 +321,15 @@ export class StoreInfraStack extends cdk.Stack {
     // Script to bootstrap the Nextjs app on EC2
     instance.addUserData(
       '#!/bin/bash',
-      'sudo apt update',
-      'curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -',
-      'sudo apt-get install -y nodejs',
-      'sudo npm install -g npm@latest',
-      'sudo npm install pm2 -g',
+      'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash',
+      'export NVM_DIR="$HOME/.nvm"',
+      '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"',
+      'nvm install --lts',
+      'yum -y update',
+      'yum -y install git',
+      'npm install -g pm2',
       `git clone ${stackConfig.GITHUB_REPO}`,
-      'cd recycle-bin-boutique/store-app',
+      'cd /recycle-bin-boutique/store-app',
       `echo '{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${createHash('md5').update(this.node.addr).digest('hex')}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js", "rumMonitorId": "${rumMonitorId}", "rumMonitorIdentityPoolId": "${rumMonitorIdentityPoolId}"}' > aws-backend-config.json`,
       'npm install',
       'npm run build',
