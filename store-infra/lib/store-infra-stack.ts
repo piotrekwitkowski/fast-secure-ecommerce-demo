@@ -8,7 +8,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as cforigins from 'aws-cdk-lib/aws-cloudfront-origins';
-import * as waf from "aws-cdk-lib/aws-wafv2";
+import * as autoscaling from "aws-cdk-lib/aws-autoscaling";
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { AwsCustomResource, PhysicalResourceId, AwsCustomResourcePolicy } from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
@@ -211,7 +212,7 @@ export class StoreInfraStack extends cdk.Stack {
     });
 
 
-    // Create a security group locked to CloudFront IPs
+    // Create a security group locking the LB to CloudFront IPs
     // first get the CloudFront prefix list in the CDK deployment region using a custom resource
 
     const prefixListId = new AwsCustomResource(this, 'GetPrefixListId', {
@@ -233,36 +234,48 @@ export class StoreInfraStack extends cdk.Stack {
       }),
     }).getResponseField('PrefixLists.0.PrefixListId');
 
-    const securityGroup = new ec2.SecurityGroup(this, 'MySecurityGroup', {
+    const lbSecurityGroup = new ec2.SecurityGroup(this, 'LBSecurityGroup', {
       vpc,
-      description: 'Allow access from CloudFront IPs on port 3000, and any IP on port 22',
+      description: 'Allow access from CloudFront IPs',
       allowAllOutbound: true
     });
-    securityGroup.addIngressRule(
+    lbSecurityGroup.addIngressRule(
       ec2.Peer.prefixList(prefixListId),
-      ec2.Port.tcp(3000),
-      'Allow port 3000 on IPv4 from CloudFront '
+      ec2.Port.tcp(80),
+      'Allow port 80 on IPv4 from CloudFront '
     );
+    // create SG for the EC2 isntance
+    const ec2SecurityGroup = new ec2.SecurityGroup(this, 'EC2SecurityGroup', {
+      vpc,
+      description: 'SGs for EC2s',
+      allowAllOutbound: true
+    });
+    ec2SecurityGroup.addIngressRule(
+      ec2.Peer.securityGroupId(lbSecurityGroup.securityGroupId),
+      ec2.Port.tcp(3000),
+      'Accept traffic from LB'
+    );
+
     // For troubleshooting, allow myIP address
     (async () => {
       try {
         const res = await fetch('https://api.ipify.org/?format=json');
         const data = await res.json();
-        console.log(data.ip)
-        securityGroup.addIngressRule(
+        console.log(`Your IP address is ${data.ip}`);
+        ec2SecurityGroup.addIngressRule(
           ec2.Peer.ipv4(`${data.ip}/32`),
           ec2.Port.tcp(22),
           'Allow SSH from myIP'
         );
-        securityGroup.addIngressRule(
+        lbSecurityGroup.addIngressRule(
           ec2.Peer.ipv4(`${data.ip}/32`),
-          ec2.Port.tcp(3000),
-          'Allow port 3000 from myIP'
+          ec2.Port.tcp(80),
+          'Allow port 80 from myIP'
         );
       } catch (err) {
         console.log("error fetching IP");
       }
-    })() 
+    })()
 
     // Create an IAM role for the EC2 instance with DynamoDB read/write permissions to the role
     const role = new iam.Role(this, 'MyEC2Role', {
@@ -271,17 +284,40 @@ export class StoreInfraStack extends cdk.Stack {
     productsTable.grantReadWriteData(role);
     usersTable.grantReadWriteData(role);
 
-    // Create the EC2 instance
-    const instance = new ec2.Instance(this, 'store_backend_ec2', {
+    // Create Autoscaling group
+    const asg = new autoscaling.AutoScalingGroup(this, 'ASG', {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
       machineImage: ec2.MachineImage.latestAmazonLinux2023(),
       vpc,
-      vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-      securityGroup: securityGroup,
       role: role,
-      associatePublicIpAddress: true,
+      securityGroup: ec2SecurityGroup,
+      minCapacity: 2,
+      maxCapacity: 4,
     });
 
+    const alb = new elbv2.ApplicationLoadBalancer(this, 'LB', {
+      vpc,
+      internetFacing: true,
+      securityGroup: lbSecurityGroup,
+    });
+
+    const listener = alb.addListener('Listener', {
+      port: 80,
+      open: false
+    });
+
+    listener.addTargets('ASGTarget', {
+      port: 3000,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      targets: [asg],
+      healthCheck: {
+        path: '/',
+        unhealthyThresholdCount: 2,
+        healthyThresholdCount: 3,
+        interval: cdk.Duration.seconds(5),
+        timeout: cdk.Duration.seconds(2),
+      }
+    });
 
 
     // Create the WebACL in us-east-1 to associate it with CloudFront
@@ -342,7 +378,7 @@ export class StoreInfraStack extends cdk.Stack {
         parameters: {
           Name: rumApplicationName,
         },
-        physicalResourceId: PhysicalResourceId.of('RumParameters'), 
+        physicalResourceId: PhysicalResourceId.of('RumParameters'),
       },
       policy: AwsCustomResourcePolicy.fromSdkCalls({
         resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
@@ -352,7 +388,7 @@ export class StoreInfraStack extends cdk.Stack {
     const rumMonitorIdentityPoolId = rumParameters.getResponseField('AppMonitor.AppMonitorConfiguration.IdentityPoolId');
 
     // Script to bootstrap the Nextjs app on EC2
-    instance.addUserData(
+    asg.addUserData(
       '#!/bin/bash',
       'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash',
       'export NVM_DIR="$HOME/.nvm"',
@@ -393,8 +429,7 @@ export class StoreInfraStack extends cdk.Stack {
       runtime: cloudfront.FunctionRuntime.JS_2_0,
     });
 
-    const backendOrigin = new cforigins.HttpOrigin(instance.instancePublicDnsName, {
-      httpPort: 3000,
+    const backendOrigin = new cforigins.HttpOrigin(alb.loadBalancerDnsName, {
       protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
     });
 
@@ -522,6 +557,12 @@ export class StoreInfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'CloudFrontDomainName', {
       description: 'CloudFront domain name of the Recycle Bin Boutique',
       value: cdn.distributionDomainName
+    });
+
+    // Output ALB domain name
+    new cdk.CfnOutput(this, 'ALBDomainName', {
+      description: 'The domain name of associated ALB',
+      value: alb.loadBalancerDnsName
     });
 
   }
