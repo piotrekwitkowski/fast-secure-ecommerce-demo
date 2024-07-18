@@ -262,7 +262,7 @@ export class StoreInfraStack extends cdk.Stack {
       } catch (err) {
         console.log("error fetching IP");
       }
-    })()
+    })() 
 
     // Create an IAM role for the EC2 instance with DynamoDB read/write permissions to the role
     const role = new iam.Role(this, 'MyEC2Role', {
@@ -273,7 +273,7 @@ export class StoreInfraStack extends cdk.Stack {
 
     // Create the EC2 instance
     const instance = new ec2.Instance(this, 'store_backend_ec2', {
-      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.SMALL),
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
       machineImage: ec2.MachineImage.latestAmazonLinux2023(),
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
@@ -282,27 +282,46 @@ export class StoreInfraStack extends cdk.Stack {
       associatePublicIpAddress: true,
     });
 
-    // Create a WebACL and populate it with rules
-    const webACLName = 'RecycleBinBoutiqueACL';
-    const webACL = new waf.CfnWebACL(this, "webACL", {
-      name: webACLName,
-      defaultAction: { allow: {} },
-      scope: "CLOUDFRONT",
-      visibilityConfig: {
-        cloudWatchMetricsEnabled: true,
-        metricName: "RecycleBinBoutiqueACL",
-        sampledRequestsEnabled: true,
+
+
+    // Create the WebACL in us-east-1 to associate it with CloudFront
+    const webACLName = `RecycleBinBoutiqueACL${this.node.addr}`;
+    const wafWebaclCreateCR = new AwsCustomResource(this, 'createWAF', {
+      onCreate: {
+        service: 'WAFv2',
+        action: 'CreateWebACL',
+        region: 'us-east-1',
+        parameters: {
+          Name: webACLName,
+          Scope: 'CLOUDFRONT',
+          DefaultAction: { Allow: {} },
+          Rules: wafRules,
+          VisibilityConfig: {
+            CloudWatchMetricsEnabled: true,
+            MetricName: "RecycleBinBoutiqueACL",
+            SampledRequestsEnabled: true,
+          },
+        },
+        outputPaths: ['Summary'],
+        physicalResourceId: PhysicalResourceId.of('createWAF'),
       },
-      rules: wafRules,
+      policy: AwsCustomResourcePolicy.fromSdkCalls({
+        resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
+      }),
     });
+    const webAclID = wafWebaclCreateCR.getResponseField('Summary.Id');
+    const webAclARN = wafWebaclCreateCR.getResponseField('Summary.ARN');
+
+    //TODO delete / update
 
     // Get the url used for the Client side javascript integration
-    const wafCR = new AwsCustomResource(this, 'WAFproperties', {
+    const wafWebaclIntegrationURLCR = new AwsCustomResource(this, 'WAFproperties', {
       onCreate: {
         service: 'WAFv2',
         action: 'GetWebACL',
+        region: 'us-east-1',
         parameters: {
-          Id: webACL.attrId,
+          Id: webAclID,
           Name: webACLName,
           Scope: 'CLOUDFRONT'
         },
@@ -313,7 +332,7 @@ export class StoreInfraStack extends cdk.Stack {
         resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
       }),
     });
-    const wafIntegrationURL = wafCR.getResponseField('ApplicationIntegrationURL');
+    const wafIntegrationURL = wafWebaclIntegrationURLCR.getResponseField('ApplicationIntegrationURL');
 
     // get the paramters of the RUM script tag
     const rumParameters = new AwsCustomResource(this, 'RumParameters', {
@@ -383,7 +402,7 @@ export class StoreInfraStack extends cdk.Stack {
       responseHeadersPolicyName: 'RecycleBinBoutiqueRHP',
       comment: 'A default policy for the Recycle Bin Boutique',
       securityHeadersBehavior: {
-        contentSecurityPolicy: { contentSecurityPolicy: 'default-src https:;', override: true },
+        // contentSecurityPolicy: { contentSecurityPolicy: 'default-src https:;', override: true }, TBD
         contentTypeOptions: { override: true },
         frameOptions: { frameOption: cloudfront.HeadersFrameOption.DENY, override: true },
         referrerPolicy: { referrerPolicy: cloudfront.HeadersReferrerPolicy.NO_REFERRER, override: true },
@@ -395,7 +414,7 @@ export class StoreInfraStack extends cdk.Stack {
 
     const cdn = new cloudfront.Distribution(this, 'store-cdn', {
       comment: 'CloudFront to serve the Recycle Bin Boutique',
-      webAclId: webACL.attrArn,
+      webAclId: webAclARN,
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       publishAdditionalMetrics: true,
       defaultBehavior: {
