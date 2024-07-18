@@ -85,7 +85,7 @@ export class StoreInfraStack extends cdk.Stack {
 
     // adding initial images to it
     new cdk.aws_s3_deployment.BucketDeployment(this, 'ProductImages', {
-      sources: [cdk.aws_s3_deployment.Source.asset('../assets/images')],
+      sources: [cdk.aws_s3_deployment.Source.asset('../store-app/public/images')],
       destinationBucket: originalImageBucket,
       destinationKeyPrefix: 'images/',
     });
@@ -243,12 +243,26 @@ export class StoreInfraStack extends cdk.Stack {
       ec2.Port.tcp(3000),
       'Allow port 3000 on IPv4 from CloudFront '
     );
-    // For troubleshooting, but in real world it would be restrcited.
-    securityGroup.addIngressRule(
-      ec2.Peer.ipv4('0.0.0.0/0'),
-      ec2.Port.tcp(22),
-      'Allow SSH'
-    );
+    // For troubleshooting, allow myIP address
+    (async () => {
+      try {
+        const res = await fetch('https://api.ipify.org/?format=json');
+        const data = await res.json();
+        console.log(data.ip)
+        securityGroup.addIngressRule(
+          ec2.Peer.ipv4(`${data.ip}/32`),
+          ec2.Port.tcp(22),
+          'Allow SSH from myIP'
+        );
+        securityGroup.addIngressRule(
+          ec2.Peer.ipv4(`${data.ip}/32`),
+          ec2.Port.tcp(3000),
+          'Allow port 3000 from myIP'
+        );
+      } catch (err) {
+        console.log("error fetching IP");
+      }
+    })()
 
     // Create an IAM role for the EC2 instance with DynamoDB read/write permissions to the role
     const role = new iam.Role(this, 'MyEC2Role', {
