@@ -65,6 +65,7 @@ If the backend is not reachable, connect to the EC2 instance using the AWS conso
 pm2 list
 pm2 restart nextjs-app
 pm2 start npm --name nextjs-app -- run start -- -p 3000
+cat /var/log/cloud-init-output.log
 ```
 
 Querying WAF logs to understand what happened with a specific reauest
