@@ -84,7 +84,7 @@ fields @timestamp, @message
 # Work in progress WIP
 
 ## Improve scenarios
-* Review Scnarios holisitcally, and evolve narration to to do build ups (attack scenarios, or performance improvement)
+* Review scnarios holisitcally, and evolve narration to to do build ups (attack scenarios, or performance improvement)
 * Use cloudshell when possible
 * Change VPN scnenario to Captcha
 * Reduce impact of random Captcha on loading pages (e.g. broken images)
@@ -95,15 +95,17 @@ fields @timestamp, @message
 * OWASP relatd attack
 * Waiting room
 * Report false positive page
-* SEO verified
+* Google search allow list
+* Captcha before registration example
+* Lazy loading
+* Speculation API
+* Video content
 
-## Improve code 
+## Evolve code 
 * Refactor nextjs app code (images, state, storage, router, apis, etc..)
 * Review Infra code: CSP, Custom resource lifecycle management, custom resource permissions, multiregion, Inforce origin cloaking at L7
 * Generate secret key dynamically with CDK.
 * Improve caching: Origin shield, review caching rules holisitcally
 * Generate intial data using GenAI
-* Low latency treaming video
 * GenAI search bar
-* Speculation API
-* Lazy loading
+
