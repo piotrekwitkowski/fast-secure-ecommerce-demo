@@ -106,3 +106,4 @@ fields @timestamp, @message
 * Low latency treaming video
 * GenAI search bar
 * Speculation API
+* Lazy loading
