@@ -131,6 +131,18 @@ export const wafRules = [
             AWSManagedRulesBotControlRuleSet: { InspectionLevel: "TARGETED" }
           }
         ],
+        ScopeDownStatement: {
+          RegexMatchStatement: {
+            FieldToMatch: { UriPath: {} },
+            RegexString: "^(?!.*\.(js|css|ico|jpeg|svg)$)$",
+            TextTransformations: [
+              {
+                Priority: 0,
+                Type: "LOWERCASE"
+              }
+            ]
+          }
+        },
         RuleActionOverrides: [
           {
             ActionToUse: {

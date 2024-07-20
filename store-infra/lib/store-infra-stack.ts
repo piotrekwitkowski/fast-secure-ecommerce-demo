@@ -387,6 +387,10 @@ export class StoreInfraStack extends cdk.Stack {
     const rumMonitorId = rumParameters.getResponseField('AppMonitor.Id');
     const rumMonitorIdentityPoolId = rumParameters.getResponseField('AppMonitor.AppMonitorConfiguration.IdentityPoolId');
 
+    const aws_config = `{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${createHash('md5').update(this.node.addr).digest('hex')}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js", "rumMonitorId": "${rumMonitorId}", "rumMonitorIdentityPoolId": "${rumMonitorIdentityPoolId}"}`;
+    // Write the config file to the local app folder for testing urpouses using npm run dev
+    fs.writeFileSync(path.join(__dirname, "../../store-app/aws-backend-config.json"), aws_config);
+
     // Script to bootstrap the Nextjs app on EC2
     asg.addUserData(
       '#!/bin/bash',
@@ -399,7 +403,7 @@ export class StoreInfraStack extends cdk.Stack {
       'npm install -g pm2',
       `git clone ${stackConfig.GITHUB_REPO}`,
       'cd /recycle-bin-boutique/store-app',
-      `echo '{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${createHash('md5').update(this.node.addr).digest('hex')}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js", "rumMonitorId": "${rumMonitorId}", "rumMonitorIdentityPoolId": "${rumMonitorIdentityPoolId}"}' > aws-backend-config.json`,
+      `echo '${aws_config}' > aws-backend-config.json`,
       'npm install',
       'npm run build',
       'pm2 start npm --name nextjs-app -- run start -- -p 3000'
@@ -455,7 +459,15 @@ export class StoreInfraStack extends cdk.Stack {
       defaultBehavior: {
         origin: backendOrigin,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+        cachePolicy: new cloudfront.CachePolicy(this, "dynamicCachePolicy", {
+          defaultTtl: cdk.Duration.seconds(0),
+          minTtl: cdk.Duration.seconds(0),
+          maxTtl: cdk.Duration.days(365),
+          queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
+          cookieBehavior: cloudfront.CacheCookieBehavior.allowList('token'),
+          enableAcceptEncodingBrotli: true,
+          enableAcceptEncodingGzip: true,
+        }),
         originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_AND_CLOUDFRONT_2022, //TODO could break with ALB
         responseHeadersPolicy: responseHeadersPolicy,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,

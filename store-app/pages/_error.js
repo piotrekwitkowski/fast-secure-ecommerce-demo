@@ -6,11 +6,11 @@ function Error({ statusCode }) {
         return (
             <Layout>
                 <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
-                    <div class="flex items-center p-6 rounded-lg ">
+                    <div className="flex items-center p-6 rounded-lg ">
      
                         <div>
-                            <h2 class="font-sans text-2xl font-bold text-gray-800 mb-2"> This page does not exist, sorry !</h2>
-                            <p class="font-sans text-lg text-gray-600">Are you sure this is the right link?</p>
+                            <h2 className="font-sans text-2xl font-bold text-gray-800 mb-2"> This page does not exist, sorry !</h2>
+                            <p className="font-sans text-lg text-gray-600">Are you sure this is the right link?</p>
                         </div>
                     </div>
                 </div>

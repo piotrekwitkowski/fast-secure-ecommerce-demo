@@ -7,12 +7,14 @@ import { login } from '../utils/auth';
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const router = useRouter();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+
+    function setError(err) {
+      document.getElementById("error").innerHTML = err;
+    }
 
     // Basic form validation
     if (!username || !password) {
@@ -26,22 +28,28 @@ export default function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-
-      const data = await response.json();
-
+      
       if (response.ok) {
         // Login successful
+        const data = await response.json();
         login(username, data.token)
         router.push('/'); // Redirect to home page
       } else {
         // Login failed
-        setError(data.message || 'Login failed');
-        document.getElementById("error").innerHTML = error;
+        if ((response.status === 405) || (response.status === 202)) {
+          // reload the page to display the captcha or challenge
+          router.reload()
+        } else if (response.status === 403) {
+          setError('Login was not authorized and blocked');
+        } else {
+          const data = await response.json();
+          setError(data.message || 'Login failed');
+        }
+        
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
-      document.getElementById("error").innerHTML = error;
-      console.error('Login error:', err);
+      console.log('Login error:', err);
     }
   };
 
