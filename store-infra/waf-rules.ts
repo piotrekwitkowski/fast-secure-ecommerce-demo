@@ -132,15 +132,19 @@ export const wafRules = [
           }
         ],
         ScopeDownStatement: {
-          RegexMatchStatement: {
-            FieldToMatch: { UriPath: {} },
-            RegexString: "^(?!.*\.(js|css|ico|jpeg|svg)$)$",
-            TextTransformations: [
-              {
-                Priority: 0,
-                Type: "LOWERCASE"
+          NotStatement: {
+            Statement: {
+              RegexMatchStatement: {
+                FieldToMatch: { UriPath: {} },
+                RegexString: "(?i)\.(jpe?g|gif|png|svg|ico|css|js|woff2?)$",
+                TextTransformations: [
+                  {
+                    Priority: 0,
+                    Type: "LOWERCASE"
+                  }
+                ]
               }
-            ]
+            }
           }
         },
         RuleActionOverrides: [
