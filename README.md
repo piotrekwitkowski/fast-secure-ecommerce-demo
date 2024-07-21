@@ -1,26 +1,28 @@
 # The Recycle Bin Boutique
-An online store demo to showcase the capabilites of AWS Edge Services, mainly CloudFront and AWS WAF. Please note that this project is currently under development, and it's not the final version.
+The Recycle Bin Boutique is fictitious online store that is accelerated by Amazon CloudFront and protected with AWS WAF, both part of AWS edge services. It's an educational project, that help developers in understanding the capabilities of AWS edge services. It can be used as a demo tool, and as a testing sandbox. The content of this online store , such as product names, descriptions and images are generated with the help of Anthropic's Sonnet model. The project is currently in experimental stage.
+
 ![The Recycle Bin Boutique](screenshot.jpeg)
 
 # How to deploy
+
+Follow these steps in your command line to deploy the boutique with CDK, using the region and account information configured in your AWS CLI.
 
 ```javascript
 git clone https://github.com/achrafsouk/recycle-bin-boutique.git
 cd recycle-bin-boutique/store-infra
 npm install
-npm install -f --omit=optional --prefix functions/image-processing-lambda sharp @img/sharp-linux-x64 @img/sharp-libvips-linux-x64
-cdk deploy --outputs-file ../store-app/aws-backend-config.json
+cdk deploy
 ```
 
 # Architecture
 
-The backend includes:
-* A nextJS based SSR application hosted on an EC2 instance.
-* DynamoDB tables to store user and product information
-* S3 bucket to store product images
-* Image optimization component based on an S3 bucket for storing trasnformed images, Lambda function to transform them and a CloudFront Function to automatically detect the browser image capabilities.
+The backend of the boutique includes the following components:
+* A nextJS based SSR application hosted on EC2 instances behind an Application Load Balancer.
+* DynamoDB tables to store user and product information.
+* S3 buckets to store original and transformed images.
+* A Lamnda function that is responsible for transforming images.
 
-It is exposed to the internet through CloudFront and protected with AWS WAF.
+The backend is exposed to the internet through a CloudFront distribution and protected with AWS WAF. CloudFront Functions coupled with KeyValueStore, implement edge logic such as: A/B testing, redirections, image format detection, etc..
 
 ![](rbb-diag.png)
 
@@ -80,6 +82,8 @@ fields @timestamp, @message
 | filter httpRequest.requestId = ' UW9-AA4dRZVxrLJeVEWIoXt-8mZ98b7gfYH-NhXJhgwIG76HymvrOw=='
 | limit 20
 ```
+
+cdk deploy --outputs-file ../store-app/aws-backend-config.json
 
 # Request flow
 
