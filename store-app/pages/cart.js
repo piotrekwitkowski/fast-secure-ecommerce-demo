@@ -47,7 +47,7 @@ export default function Cart() {
       return <Layout>
         <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
           <div class="flex items-center p-6 rounded-lg ">
-            <img src="full-cart.jpeg" alt="Sad ghost in shopping cart" class="w-36 h-36 mr-6" />
+            <Image src="images/full-cart.jpeg" className="w-36 h-36 mr-6" width={200} height={200} />
             <div>
               <h2 class="font-sans text-2xl font-bold text-gray-800 mb-2">{username}, thanks for your order :)</h2>
               <p class="font-sans text-lg text-gray-600">Your shipment is on the way!</p>
@@ -58,11 +58,11 @@ export default function Cart() {
     } else {
       return <Layout>
         <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
-          <div class="flex items-center p-6 rounded-lg ">
-            <img src="empty-cart.jpeg" alt="Sad ghost in shopping cart" class="w-36 h-36 mr-6" />
+          <div className="flex items-center p-6 rounded-lg ">
+            <Image src="images/empty-cart.jpeg" className="w-36 h-36 mr-6" width={200} height={200} />
             <div>
-              <h2 class="font-sans text-2xl font-bold text-gray-800 mb-2">{(username != '') ? username + ', your' : 'Your'} cart is empty :(</h2>
-              <p class="font-sans text-lg text-gray-600">Please add some stuff to it!</p>
+              <h2 className="font-sans text-2xl font-bold text-gray-800 mb-2">{(username != '') ? username + ', your' : 'Your'} cart is empty :(</h2>
+              <p className="font-sans text-lg text-gray-600">Please add some stuff to it!</p>
             </div>
           </div>
         </div>
