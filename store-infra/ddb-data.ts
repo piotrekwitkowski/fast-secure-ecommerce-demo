@@ -13,7 +13,7 @@ export const products = [
 
 export const defaultUser =
     {
-        username: { S: 'Achraf' },
+        username: { S: 'Joud' },
         phone: { S: '+971546352343' },
         password: { S: 'demo' },
         address: { S: 'Marina, Dubai, UAE' },
