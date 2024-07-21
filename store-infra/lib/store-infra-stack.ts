@@ -11,6 +11,8 @@ import * as cforigins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as autoscaling from "aws-cdk-lib/aws-autoscaling";
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as waf from 'aws-cdk-lib/aws-wafv2';
 import { AwsCustomResource, PhysicalResourceId, AwsCustomResourcePolicy } from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 import { createHash } from 'crypto';
@@ -22,6 +24,8 @@ import { stackConfig } from '../stack-config';
 export class StoreInfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    const secretKey = createHash('md5').update(this.node.addr).digest('hex');
 
     // DyanmoDB tables to store users and prodcts data
     const usersTable = new dynamodb.Table(this, "usersTable", {
@@ -322,7 +326,7 @@ export class StoreInfraStack extends cdk.Stack {
 
     // Create the WebACL in us-east-1 to associate it with CloudFront
     const webACLName = `RecycleBinBoutiqueACL${this.node.addr}`;
-    const wafWebaclCreateCR = new AwsCustomResource(this, 'createWAF', {
+    const wafWebaclCreateCR = new AwsCustomResource(this, 'createWAFWebACL', {
       onCreate: {
         service: 'WAFv2',
         action: 'CreateWebACL',
@@ -339,7 +343,7 @@ export class StoreInfraStack extends cdk.Stack {
           },
         },
         outputPaths: ['Summary'],
-        physicalResourceId: PhysicalResourceId.of('createWAF'),
+        physicalResourceId: PhysicalResourceId.of('createWAFWebACL'),
       },
       policy: AwsCustomResourcePolicy.fromSdkCalls({
         resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
@@ -348,10 +352,29 @@ export class StoreInfraStack extends cdk.Stack {
     const webAclID = wafWebaclCreateCR.getResponseField('Summary.Id');
     const webAclARN = wafWebaclCreateCR.getResponseField('Summary.ARN');
 
-    //TODO delete / update
+    const webAclLogGroup = new logs.LogGroup(this, "awsWafLogs", {
+      logGroupName: 'aws-waf-logs-recycle-bin',
+      retention: logs.RetentionDays.ONE_DAY
+    });
+
+    // Create logging configuration with log group as destination
+    new waf.CfnLoggingConfiguration(this, "webAclLoggingConfiguration", {
+      logDestinationConfigs: [
+        // Construct the different ARN format from the logGroupName
+        cdk.Stack.of(this).formatArn({
+          arnFormat: cdk.ArnFormat.COLON_RESOURCE_NAME,
+          service: "logs",
+          resource: "log-group",
+          resourceName: webAclLogGroup.logGroupName,
+        })
+      ],
+      resourceArn: webAclARN 
+    });
+
+    //TODO delete / update webcl 
 
     // Get the url used for the Client side javascript integration
-    const wafWebaclIntegrationURLCR = new AwsCustomResource(this, 'WAFproperties', {
+    const wafWebaclIntegrationURLCR = new AwsCustomResource(this, 'WAFWebACLproperties', {
       onCreate: {
         service: 'WAFv2',
         action: 'GetWebACL',
@@ -362,7 +385,7 @@ export class StoreInfraStack extends cdk.Stack {
           Scope: 'CLOUDFRONT'
         },
         outputPaths: ['ApplicationIntegrationURL'],
-        physicalResourceId: PhysicalResourceId.of('WAFproperties'),
+        physicalResourceId: PhysicalResourceId.of('WAFWebACLproperties'),
       },
       policy: AwsCustomResourcePolicy.fromSdkCalls({
         resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
@@ -387,9 +410,7 @@ export class StoreInfraStack extends cdk.Stack {
     const rumMonitorId = rumParameters.getResponseField('AppMonitor.Id');
     const rumMonitorIdentityPoolId = rumParameters.getResponseField('AppMonitor.AppMonitorConfiguration.IdentityPoolId');
 
-    const aws_config = `{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${createHash('md5').update(this.node.addr).digest('hex')}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js", "rumMonitorId": "${rumMonitorId}", "rumMonitorIdentityPoolId": "${rumMonitorIdentityPoolId}"}`;
-    // Write the config file to the local app folder for testing urpouses using npm run dev
-    fs.writeFileSync(path.join(__dirname, "../../store-app/aws-backend-config.json"), aws_config);
+    const aws_config = `{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${secretKey}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js", "rumMonitorId": "${rumMonitorId}", "rumMonitorIdentityPoolId": "${rumMonitorIdentityPoolId}"}`;
 
     // Script to bootstrap the Nextjs app on EC2
     asg.addUserData(
@@ -576,6 +597,36 @@ export class StoreInfraStack extends cdk.Stack {
       description: 'The domain name of associated ALB',
       value: alb.loadBalancerDnsName
     });
+
+    new cdk.CfnOutput(this, 'products_ddb_table', {
+      description: 'ddb product table',
+      value: productsTable.tableName
+    });
+    new cdk.CfnOutput(this, 'users_ddb_table', {
+      description: 'ddb users table',
+      value: usersTable.tableName
+    });
+    new cdk.CfnOutput(this, 'login_secret_key', {
+      description: 'secret key used for sign in',
+      value: secretKey
+    });
+    new cdk.CfnOutput(this, 'aws_region', {
+      description: 'cdk region name',
+      value: this.region
+    });
+    new cdk.CfnOutput(this, 'waf_url', {
+      description: 'waf integration url',
+      value: `${wafIntegrationURL}challenge.compact.js`
+    });
+    new cdk.CfnOutput(this, 'rumMonitorId', {
+      description: 'rum monitor id',
+      value: rumMonitorId
+    });
+    new cdk.CfnOutput(this, 'rumMonitorIdentityPoolId', {
+      description: 'rum monitor identity pool id',
+      value: rumMonitorIdentityPoolId
+    });
+
 
   }
 }

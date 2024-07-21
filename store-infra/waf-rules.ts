@@ -1,5 +1,3 @@
-import * as waf from "aws-cdk-lib/aws-wafv2";
-
 export const wafRules = [
 
   {
@@ -119,8 +117,56 @@ export const wafRules = [
     },
   },
   {
-    Name: "MANAGED_general_bot_protection",
+    Name: "MANAGED_app_vulnerabilities_core_rule_set",
     Priority: 5,
+    OverrideAction: { None: {} },
+    Statement: {
+      ManagedRuleGroupStatement: {
+        VendorName: "AWS",
+        Name: "AWSManagedRulesCommonRuleSet",
+      },
+    },
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "MANAGED_app_vulnerabilities_core_rule_set",
+    },
+  },
+  {
+    Name: "MANAGED_app_vulnerabilities_linux_protections",
+    Priority: 6,
+    OverrideAction: { None: {} },
+    Statement: {
+      ManagedRuleGroupStatement: {
+        VendorName: "AWS",
+        Name: "AWSManagedRulesLinuxRuleSet",
+      },
+    },
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "MANAGED_app_vulnerabilities_linux_protections",
+    },
+  },
+  {
+    Name: "MANAGED_app_vulnerabilities_bad_inputs",
+    Priority: 7,
+    OverrideAction: { None: {} },
+    Statement: {
+      ManagedRuleGroupStatement: {
+        VendorName: "AWS",
+        Name: "AWSManagedRulesKnownBadInputsRuleSet",
+      },
+    },
+    VisibilityConfig: {
+      SampledRequestsEnabled: true,
+      CloudWatchMetricsEnabled: true,
+      MetricName: "MANAGED_app_vulnerabilities_bad_inputs",
+    },
+  },
+  {
+    Name: "MANAGED_general_bot_protection",
+    Priority: 8,
     OverrideAction: { None: {} },
     Statement: {
       ManagedRuleGroupStatement: {
@@ -171,7 +217,7 @@ export const wafRules = [
   },
   {
     Name: "CUSTOM_Block-requests-to-apis-with-non-valid-tokens",
-    Priority: 6,
+    Priority: 9,
     Action: { Block: {} },
     Statement: {
       AndStatement: {
@@ -251,7 +297,7 @@ export const wafRules = [
   },
   {
     Name: "MANAGED_account-takover-prevention-login-api",
-    Priority: 7,
+    Priority: 10,
     Statement: {
       ManagedRuleGroupStatement: {
         VendorName: "AWS",
@@ -299,10 +345,9 @@ export const wafRules = [
       CloudWatchMetricsEnabled: true,
       MetricName: "MANAGED_account-takover-prevention-login-api",
     },
-  }
-  , {
+  }, {
     Name: "CUSTOM_Block-logins-with-compromised-credentials",
-    Priority: 8,
+    Priority: 11,
     Action: { Block: {} },
     Statement: {
       LabelMatchStatement: {
@@ -318,7 +363,7 @@ export const wafRules = [
   },
   {
     Name: "MANAGED_fake-account-creation-prevention",
-    Priority: 9,
+    Priority: 12,
     Statement: {
       ManagedRuleGroupStatement: {
         VendorName: "AWS",
@@ -376,7 +421,7 @@ export const wafRules = [
   },
   {
     Name: "CUSTOM_Block-account-creation-with-medium-volumetricsessionhigh",
-    Priority: 10,
+    Priority: 13,
     Action: { Block: {} },
     Statement: {
       LabelMatchStatement: {
