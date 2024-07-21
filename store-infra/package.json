@@ -5,6 +5,7 @@
     "store-infra": "bin/store-infra.js"
   },
   "scripts": {
+    "install": "npm install -f --omit=optional --prefix functions/image-processing-lambda sharp @img/sharp-linux-x64 @img/sharp-libvips-linux-x64",
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
