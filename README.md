@@ -93,7 +93,12 @@ pm2 start npm --name nextjs-app -- run start -- -p 3000
 cat /var/log/cloud-init-output.log
 ```
 
+If you want to test the boutique locally, do the following
+
 cdk deploy --outputs-file ../store-app/aws-backend-config.json
+npm install (in store-app folder)
+remove the hierarchy in the aws-backend-config.json file
+
 
 # Request flow
 
