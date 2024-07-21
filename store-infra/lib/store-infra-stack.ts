@@ -354,7 +354,8 @@ export class StoreInfraStack extends cdk.Stack {
 
     const webAclLogGroup = new logs.LogGroup(this, "awsWafLogs", {
       logGroupName: 'aws-waf-logs-recycle-bin',
-      retention: logs.RetentionDays.ONE_DAY
+      retention: logs.RetentionDays.ONE_DAY,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     // Create logging configuration with log group as destination
