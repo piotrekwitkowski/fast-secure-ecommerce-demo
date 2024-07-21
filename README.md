@@ -33,7 +33,13 @@ The backend is exposed to the internet through a CloudFront distribution and pro
 
 # Edge security scenarios
 
-The following test scenarios cover different kind of threats that can be mitigated using AWS WAF. Replace the example CloudFront domain name (xxxxxxxx.cloudfront.net) in the scenarios with the actual one generated in the CDK deployment output.
+The following test scenarios cover different kind of threats that can be mitigated using AWS WAF. Replace the example CloudFront domain name (xxxxxxxx.cloudfront.net) in the scenarios with the actual one generated in the CDK deployment output. If you would like to dive into the WAF log record for a specific request, navigate in the AWS Console to the deployed WAF WebACL, and run the following query in CloudWatch insights tab using the request id:
+```
+fields @timestamp, @message
+| sort @timestamp desc
+| filter httpRequest.requestId = 'UW9-AA4dRZVxrLJeVEWIoXt-8mZ98b7gfYH-NhXJhgwIG76HymvrOw=='
+| limit 20
+```
 
 | Test scenario  | Threat category  | How to test | 
 |:------------- |:--------------- | :-------------|
@@ -85,14 +91,6 @@ pm2 list
 pm2 restart nextjs-app
 pm2 start npm --name nextjs-app -- run start -- -p 3000
 cat /var/log/cloud-init-output.log
-```
-
-Querying WAF logs to understand what happened with a specific reauest
-```
-fields @timestamp, @message
-| sort @timestamp desc
-| filter httpRequest.requestId = ' UW9-AA4dRZVxrLJeVEWIoXt-8mZ98b7gfYH-NhXJhgwIG76HymvrOw=='
-| limit 20
 ```
 
 cdk deploy --outputs-file ../store-app/aws-backend-config.json
