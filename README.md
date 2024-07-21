@@ -127,5 +127,5 @@ remove the hierarchy in the aws-backend-config.json file
 * Generate intial data using GenAI
 * GenAI search bar
 * output aws config file in store-app folder automatically for troubleshooting
-* protect comment api
+* protect comment api, and finish comment section with prper backend
 
