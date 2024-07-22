@@ -5,7 +5,18 @@ import Image from 'next/image'
 export default function Home({ products }) {
   return (
     <Layout>
-      { /*<h1 className="text-3xl font-bold mb-6">Products</h1>*/ }
+      <Script type="speculationrules" id="speculationAPI" dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "prerender": [
+              {
+                "source": "document",
+                "where": { "href_matches": "/product/*" },
+                "eagerness": "moderate"
+              }
+            ]
+          })
+        }}>
+      </Script>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((product) => (
           <Link href={`/product/${product.id}`} key={product.id}>
