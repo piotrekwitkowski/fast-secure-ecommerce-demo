@@ -1,7 +1,7 @@
 import Layout from './components/Layout';
 import Link from 'next/link';
-import Image from 'next/image'
-import Script from 'next/script'
+import Image from 'next/image';
+import Script from 'next/script';
 
 export default function Home({ products }) {
   return (
