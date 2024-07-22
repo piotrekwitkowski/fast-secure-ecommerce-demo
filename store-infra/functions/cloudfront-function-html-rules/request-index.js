@@ -113,7 +113,10 @@ async function handler(event) {
         }
         {
             "rules": {
-                "waitroom" : "1c56896084b4fc03729698c552763489" //secretKey
+                "waitroom" : { 
+                    "secretKey": "1c56896084b4fc03729698c552763489",
+                    "location" : "/waitroom"
+                }
             }
         }
         */
@@ -131,18 +134,18 @@ async function handler(event) {
                         statusDescription: 'Found',
                         headers: { location: { value: config.rules.redirect} },
                     }
-                } else if (config.rules.waitroom) {
+                } else if ((config.rules.waitroom) && (config.rules.waitroom.secretKey) && (config.rules.waitroom.location)) {
                     var waitroom = true;
                     if (request.cookies['token']) {
                         try { 
-                            const payload = jwt_decode(request.cookies['token'].value, config.rules.waitroom);
+                            const payload = jwt_decode(request.cookies['token'].value, config.rules.waitroom.secretKey);
                             if (payload.premium) waitroom = false;
                         } catch(e) {
                             console.log(e);
                         }
                     }     
                     if (waitroom) {
-                        request.uri = "/waitroom";
+                        request.uri = config.rules.waitroom.location;
                         return request;
                     }
                 }
