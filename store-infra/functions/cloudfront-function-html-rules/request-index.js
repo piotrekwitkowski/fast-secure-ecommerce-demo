@@ -57,9 +57,8 @@ async function handler(event) {
         return request; // move forward with request normally
 
     } catch (err) {
-        console.log(err);
-        return request; // move forward with request normally
+        // console.log(err);
     }
-
+    return request; // move forward with request normally
     
 }
