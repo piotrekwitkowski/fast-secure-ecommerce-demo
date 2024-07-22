@@ -55,7 +55,7 @@ fields @timestamp, @message
 | Calling APIs without token | **Account Takeover** | Unlike for the home page, the WAF WebACL, do not accept any request for the APIs endpoint wihtout a WAF token acquired using the javascript challenge. To test this scenario, run the following curl and verify that WAF returns a 202 challenge: <br/> ```curl -d '{username: "Joe", password: "hackedpwd"}' -H "Content-Type: application/json" -X POST https://xxxxxxxx.cloudfront.net/api/login --include --silent -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' \| grep -e HTTP/ -e x-amzn-waf-action``` |
 | Stolen credential detection | **Account Takeover** | Use the following test _stolen credentials_ and verify that api call is blocked with 403 response code <br/> ```WAF_TEST_CREDENTIAL@wafexample.com``` <br/> ```WAF_TEST_CREDENTIAL_PASSWORD``` |
 | Password traversal detection | **Account Takeover** | Password traversal detection | Using the same username, e.g. joe, and login with different passwords tens of times until the api call is blocked with 403 response code |
-| Volumetric account creation within a session | **Fake Account Creation** | Create mulitple accounts, and verify that a CAPTCHA challenged is returned after a few account creation attempts |
+| Volumetric account creation within a session | **Fake Account Creation** | Create mulitple accounts, and verify that a the api call is blocked with 403 response code after a few account creation attempts |
 
 
 # Content delivery test scenarios
