@@ -48,6 +48,7 @@ fields @timestamp, @message
 | Post malicious XSS payload | **Cross site scripting** | Log in (user: Joud, pwd: demo), then load any product page to post the following comment with an XSS payload, and verify that the request is blocked with 403 error code: <br/> ```<script><alert>Hello></alert></script>``` |
 | Rate limit with 400 threshold | **Denial of Service (DoS)** | Go to Cloudshell in the AWS Console, and run the following commands, to start a DoS from a single IP. Verify that within seconds of serving a 404 Not found from the backend, WAF starts responding with a 202 javascript challenge, then simply blocking with 403 response code after around 20 seconds of when the 400 request throshold was breached. <br/> ```wget https://raw.githubusercontent.com/achrafsouk/recycle-bin-boutique/main/scripts/rate-limit-test.sh``` <br/> ```bash rate-limit-test.sh https://xxxxxxxx.cloudfront.net/non_existing_page 400```|
 | Malicious IPs | **Distributed Denial of Service (DDoS)** | To overcome rate limits, attackers can use a large number of IPs to launch DDoS attacks. AWS curates IP lists based on their reputation, and provide them as WAF Managed rules. In this example, we challenge requests coming from am proxy server IPs (VPNs, Tor, etc..) with a CAPTCHA. To test it, load the homepage using a proxy website (e.g. https://www.blockaway.net), and verify that the page is challenged with a CAPTCHA. Note that this test might not succeed everytime, since proxy operators constantly evolve their IPs.|
+| Allow social media bots | **Inadvertly block desired bots** | Paste the home page link in one of the solial network (e.g. Linkedin) and verify that a preview has been correcrtly showed |
 | User-Agent classification | **Web scraping using HTTP libraries** | Go to Cloudshell in the AWS Console, and run the following ```curl``` command. Verify that WAF detects this HTTP library and blocks the request: <br/> ```curl -I https://xxxxxxxx.cloudfront.net/```|
 | Fake user-agent detection | **Web scraping using HTTP libraries** | To detect HTTP libraries lie ```curl``` with a fake user-agent header, a javascript challenge is used, detecting such libraries with no javascript exdcution capabilities. The javascript challenge is exectued in two different ways. The first way, is asynchronously, when a page is loaded using WAF javscript SDK. Load the home page, and in the developer tools, check the interactions between the SDK and AWS WAF. The interactions include downloading the javascript challenge, submiting the challenge result, and acquiring a session token. The second way is enforced synchronously when multiple requests are received from the same IP, using a silent javascript challenge with 202 response code. The previous DoS test scenario demonstrates it.  |
 | WAF token replay | **Web scraping using HTTP libraries** | Attackers can acquire the javascript challenge token using a brower, then use it with HTTP libraries across different IPs. To simulate it, first load the home page in a browser, and copy the token from the ```aws-waf-token``` cookie. Then run the following command in AWS Cloudshell in multiple AWS regions, after replacing the WAF cookie with the token value . Verify that the request is blocked with 403 after a few 200 OK successful token replay attempts. <br/> ```curl -I --include --silent https://xxxxxxxx.cloudfront.net/ -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' -H 'Cookie: aws-waf-token=YOUR_TOKEN_VALUE'```|
@@ -56,12 +57,14 @@ fields @timestamp, @message
 | Stolen credential detection | **Account Takeover** | Use the following test _stolen credentials_ and verify that api call is blocked with 403 response code <br/> ```WAF_TEST_CREDENTIAL@wafexample.com``` <br/> ```WAF_TEST_CREDENTIAL_PASSWORD``` |
 | Password traversal detection | **Account Takeover** | Using the same username, e.g. joe, and login with different passwords tens of times until the api call is blocked with 403 response code |
 | Volumetric account creation within a session | **Fake Account Creation** | Create mulitple accounts, and verify that a the api call is blocked with 403 response code after a few account creation attempts |
+| Report false positives | **False positives** | Under construction |
+| CAPTCHA in registration worklflow| **Fake Account Creation** | Under construction |
+| Block unexpected API paths| **Broken Access Control** | Under construction |
 
 
 # Content delivery test scenarios
 
 Load the website in your browser, and open the developer tools to understand how content is optimized when delivered through CloudFront.
-
 
  Test scenario  | How to test | 
 :--------------- | :-------------|
@@ -74,12 +77,39 @@ Load the website in your browser, and open the developer tools to understand how
 | **Real User Monitoring** |  Load a page, and check the telemetry sent to CloudWatch RUM. Go to CloudWatch RUM console and analyze the Core WebVitals of pages. | 
 | **A/B testing** | Load the home page, and verify that your session was assigned a ```user-segment``` cookie. This cookie is used to apply A/B testing experiments differently across user segments, in a sticky way. Create an experiment that includes your assigned user segment (e.g. 4), and your country code (e.g. AE for UAE) in the deployed KeyValueStore in the CloudFront Console, using the following config. Wait for a few seconds, and reload the home page. Validate that you are receicing the _v2_ version that includes a _Buy_ button. <br/> Key: ```/``` <br/> Value: ```{ "segments" : "1,2,3", "countries" : "AE,FR", "rules": { "rewrite_path" : "/index-v2" }}```| 
 | **HTTP redirection** | Load the following non existing campaign page: ```/oldCampaign```. Verify that 404 Not found is returned. Add the following http redirection rule to the deployed KeyValueStore in the CloudFront console, then validate that you are redirected to home page when loading this old campaign page <br/> Key: ```/oldCampaign``` <br/> Value: ```{ "rules": { "redirect" : "/" }}```| 
+| **Waiting room** | Under construction |
+| **Gracefull failover** | Under construction |
+| **Speculation API** | Under construction |
 
+
+# Future work
+
+## Scenarios  
+* Add Server timing headers to RUM
+* Add an observability option for CloudFront: CloudWatch or real time logs.
+* Add video content
+
+## App code
+* Refactor nextjs app code (state, router, storage, apis)
+* Complete comments functionality with backend
+* Expand ont he registration data (First and Last name)
+* GenAI search bar
+
+## Infra code
+* CSP header
+* Custom resource lifecycle management and permissions
+* Enforce origin cloaking at L7
+* Enable Origin Shield
+* Protect comment API
+
+
+# Request flow
+
+![](rbb-flow.png)
 
 # Troubleshooting
 
-If the backend is not reachable, connect to the EC2 instance using the AWS console, and use the appropriate command of the following :
-
+for issues with the backend nextjs server (e.g. not running), connect to the EC2 instance using the AWS console, and use the appropriate command of the following :
 ```
 pm2 list
 pm2 restart nextjs-app
@@ -87,41 +117,16 @@ pm2 start npm --name nextjs-app -- run start -- -p 3000
 cat /var/log/cloud-init-output.log
 ```
 
-If you want to test the boutique locally, do the following
-
+If you want to test the boutique application locally, change the cdk deploy command to 
+```
 cdk deploy --outputs-file ../store-app/aws-backend-config.json
-npm install (in store-app folder)
-remove the hierarchy in the aws-backend-config.json file
+```
+In the generated file, remove the ```StoreInfraStack``` level from the json object. Then run the following commands:
+```
+cd store-app
+npm install
+npm run dev
+```
 
-
-# Request flow
-
-![](rbb-flow.png)
-
-
-# Future work
-
-## Improve scenarios
-* Review scnarios holisitcally, and evolve narration to to do build ups (attack scenarios, or performance improvement)
-* Use cloudshell when possible
-  
-## Add scenarios  
-* Observability: WAF logs in CloudWatch logs, Athena for CloudFront logs, CloudWatch Metrics. RUM + SERVER TIMING integration
-* Social allowed 
-* Graceful failover when origin not responding
-* Waiting room
-* Report false positive page
-* Captcha before registration example
-* Speculation API
-* Video content
-* API Get block or reduce surface attack
-
-## Evolve code 
-* Refactor nextjs app code (state, router, storage, apis, user first name/ family name etc..)
-* Review Infra code: CSP, Custom resource lifecycle management, custom resource permissions, Inforce origin cloaking at L7
-* Improve caching: Origin shield, review caching rules holisitcally
-* Generate intial data using GenAI
-* GenAI search bar
-* output aws config file in store-app folder automatically for troubleshooting
-* protect comment api, and finish comment section with prper backend
+The boutique will be available on the localhost on port 3000
 
