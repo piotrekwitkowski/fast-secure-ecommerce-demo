@@ -64,7 +64,7 @@ fields @timestamp, @message
 
 # Content delivery test scenarios
 
-Load the website in your browser, and open the developer tools to understand how content is optimized when delivered through CloudFront.
+Load the website in your browser, and open the Chrome developer tools to understand how content is optimized when delivered through CloudFront.
 
  Test scenario  | How to test | 
 :--------------- | :-------------|
@@ -79,7 +79,7 @@ Load the website in your browser, and open the developer tools to understand how
 | **HTTP redirection** | Load the following non existing campaign page: ```/oldCampaign```. Verify that 404 Not found is returned. Add the following http redirection rule to the deployed KeyValueStore in the CloudFront console, then validate that you are redirected to home page when loading this old campaign page <br/> Key: ```/oldCampaign``` <br/> Value: ```{ "rules": { "redirect" : "/" }}```| 
 | **Waiting room** | Under construction |
 | **Gracefull failover** | Under construction |
-| **Speculation API** | Under construction |
+| **Speculation API** | The home page uses the specualtion rules API of the browser, to prerender product pages on whic the mouse hovers for over 200 ms. Go to the speculation rules tab in the Chrome developer tools, and check how a product page is pre-rendered when the mouse hovers over  |
 
 
 # Future work
@@ -92,6 +92,7 @@ Load the website in your browser, and open the developer tools to understand how
 ## App code
 * Refactor nextjs app code (state, router, storage, apis)
 * Complete comments functionality with backend
+* Make index-v2 functional
 * Expand ont he registration data (First and Last name)
 * GenAI search bar
 
