@@ -239,6 +239,19 @@ export const wafRules = [
                     ]
                   }
                 },
+                {
+                  ByteMatchStatement: {
+                    FieldToMatch: { UriPath: {} },
+                    PositionalConstraint: "STARTS_WITH",
+                    SearchString: "/api/comment",
+                    TextTransformations: [
+                      {
+                        Priority: 0,
+                        Type: "LOWERCASE"
+                      }
+                    ]
+                  }
+                },
               ]
             }
           },
