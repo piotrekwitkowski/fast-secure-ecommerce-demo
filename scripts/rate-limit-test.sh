@@ -7,7 +7,7 @@ url=$1 #URL where rate limit is applied
 counter=0
 until [ $counter = $rl_limit ]
 do
-result=$(curl -I --silent -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' $url | grep HTTP/)
+result=$(curl -I --silent -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' $url | grep -e HTTP/ -e x-amzn-waf-action)
 echo $(date +%s) : request number $(($counter+1)) : $result
 ((counter=counter+1))
 done
@@ -19,7 +19,7 @@ counter=0
 result=''
 until [[ $(echo $result | grep '403') == *"403"* ]]
 do
-result=$(curl -I --silent -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' $url | grep HTTP/)
+result=$(curl -I --silent -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36' $url | grep -e HTTP/ -e x-amzn-waf-action)
 echo $(date +%s) : request number $(($counter+1)) : $result
 ((counter=counter+1))
 done
