@@ -17,4 +17,5 @@ export const defaultUser =
         phone: { S: '+971546352343' },
         password: { S: 'demo' },
         address: { S: 'Marina, Dubai, UAE' },
+        premium: { S: 'yes' },
     } as const;
