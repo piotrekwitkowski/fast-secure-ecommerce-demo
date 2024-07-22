@@ -101,7 +101,6 @@ Load the website in your browser, and open the Chrome developer tools to underst
 * Custom resource lifecycle management and permissions
 * Enforce origin cloaking at L7
 * Enable Origin Shield
-* Protect comment API
 
 
 # Request flow
