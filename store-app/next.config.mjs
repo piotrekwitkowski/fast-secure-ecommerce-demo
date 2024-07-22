@@ -55,6 +55,15 @@ const nextConfig = {
         ],
       },
       {
+        source: '/waitroom',
+        headers: [
+          {
+            key: 'cache-control',
+            value: 'max-age=3600,stale-while-revalidate=60', // 1 hour
+          },
+        ],
+      },
+      {
         source: '/',
         missing: [
           {
