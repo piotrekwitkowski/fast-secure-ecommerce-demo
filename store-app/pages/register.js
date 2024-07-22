@@ -7,7 +7,8 @@ export default function Register() {
     username: '',
     password: '',
     phone: '',
-    address: ''
+    address: '',
+    premium: 'no'
   });
 
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function Register() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-      
+
 
       if (response.ok) {
         router.push('/login'); // Redirect to profile page
@@ -48,7 +49,7 @@ export default function Register() {
           const data = await response.json();
           setError(data.message || 'Login failed');
         }
-        
+
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -116,6 +117,22 @@ export default function Register() {
               required
             ></textarea>
           </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="phone">
+              Premium subscription
+            </label>
+            <select
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              id="premium"
+              name="premium"
+              value={formData.premium}
+              onChange={handleChange}
+              required
+            >
+              <option value="yes">yes</option>
+              <option value="no">no</option>
+            </select>
+          </div>
           <div className="flex items-center justify-between">
             <button
               className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
@@ -125,7 +142,7 @@ export default function Register() {
             </button>
           </div>
         </form>
-        <div id='error' className="flex items-center justify-between text-red-500"/>
+        <div id='error' className="flex items-center justify-between text-red-500" />
       </div>
     </Layout>
   );
