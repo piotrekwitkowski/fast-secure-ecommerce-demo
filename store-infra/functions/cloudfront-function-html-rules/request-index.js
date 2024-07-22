@@ -139,7 +139,7 @@ async function handler(event) {
                     if (request.cookies['token']) {
                         try { 
                             const payload = jwt_decode(request.cookies['token'].value, config.rules.waitroom.secretKey);
-                            if (payload.premium) waitroom = false;
+                            if ((payload.premium) && (payload.premium === "yes")) waitroom = false;
                         } catch(e) {
                             console.log(e);
                         }
