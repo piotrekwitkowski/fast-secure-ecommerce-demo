@@ -15,10 +15,10 @@ export default async function handler(req, res) {
     return res.status(405).end(); // Method Not Allowed
   }
 
-  const { username, password, phone, address } = req.body;
+  const { username, password, phone, address, premium } = req.body;
 
   // Basic validation
-  if (!username || !password || !phone || !address) {
+  if (!username || !password || !phone || !address || !premium) {
     return res.status(400).json({ message: 'All fields are required' });
   }
 
@@ -41,6 +41,9 @@ export default async function handler(req, res) {
       }, 
       'address' : {
         'S': address
+      }, 
+      'premium' : {
+        'S': premium
       }, 
     }
   });
