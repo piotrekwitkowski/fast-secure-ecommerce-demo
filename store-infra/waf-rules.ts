@@ -1,49 +1,6 @@
 export const wafRules = [
 
   {
-    Name: "CUSTOM_reduce-surface-attack-apis",
-    Priority: 1,
-    Action: { Block: {} },
-    Statement: {
-      OrStatement: {
-        Statements: [
-          {
-            ByteMatchStatement: {
-              FieldToMatch: { UriPath: {} },
-              PositionalConstraint: "STARTS_WITH",
-              SearchString: "/api/product",
-              TextTransformations: [
-                {
-                  Priority: 0,
-                  Type: "LOWERCASE"
-                }
-              ]
-            }
-          },
-          {
-            ByteMatchStatement: {
-              FieldToMatch: { UriPath: {} },
-              PositionalConstraint: "STARTS_WITH",
-              SearchString: "/api/products",
-              TextTransformations: [
-                {
-                  Priority: 0,
-                  Type: "LOWERCASE"
-                }
-              ]
-            }
-          },
-        ]
-      }
-
-    },
-    VisibilityConfig: {
-      SampledRequestsEnabled: true,
-      CloudWatchMetricsEnabled: true,
-      MetricName: "reduce-surface-attack-apis",
-    },
-  },
-  {
     Name: "MANAGED_malicious-ips-vpn-tor-hosting-providers",
     Priority: 2,
     Statement: {
