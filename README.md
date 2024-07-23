@@ -88,6 +88,7 @@ Load the website in your browser, and open the Chrome developer tools to underst
 * Add Server timing headers to RUM
 * Add an observability option for CloudFront: CloudWatch or real time logs.
 * Add video content
+* Key management in CFF for waiting room
 
 ## App code
 * Refactor nextjs app code (state, router, storage, apis)
@@ -95,6 +96,7 @@ Load the website in your browser, and open the Chrome developer tools to underst
 * Make index-v2 functional
 * Expand ont he registration data (First and Last name)
 * GenAI search bar
+* Config file change
 
 ## Infra code
 * CSP header
