@@ -7,7 +7,7 @@ In this page, you can find details on the architecture of the boutique, how to d
 
 # How to deploy
 
-Follow these steps in your command line to deploy the boutique with CDK, using the region and account information configured in your AWS CLI.
+Follow these steps in your command line to deploy the boutique with CDK, using the region and account information configured in your AWS CLI. It takes around 10 mins.
 
 ```javascript
 git clone https://github.com/achrafsouk/recycle-bin-boutique.git
