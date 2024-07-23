@@ -99,6 +99,7 @@ Load the website in your browser, and open the Chrome developer tools to underst
 * Expand ont he registration data (First and Last name)
 * GenAI search bar
 * Config file change
+* SEO optimization
 
 ## Infra code
 * CSP header
