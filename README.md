@@ -16,6 +16,8 @@ npm install
 cdk deploy
 ```
 
+As prerequisite, you need to have CDK installed ```npm install -g aws-cdk ``` and bootstraped ```cdk bootstrap```. 
+
 Note the generated CloudFront domain name, and the load balancer domain name, you will use them in the test scenarios.
 
 # Architecture
