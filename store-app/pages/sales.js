@@ -14,7 +14,7 @@ export default function Sales({ }) {
                             playsInline
                             className="max-w-full"
                         >
-                            <source src="/sales.mp4" type="video/mp4" />
+                            <source src="sales.mp4" type="video/mp4" />
                             Your browser does not support the video tag.
                         </video>
                     </div>
