@@ -10,7 +10,16 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/logo.svg',
+        source: '/*.mp4',
+        headers: [
+          {
+            key: 'cache-control',
+            value: 'max-age=172800,stale-while-revalidate=60', // two days
+          },
+        ],
+      },
+      {
+        source: '/*.svg',
         headers: [
           {
             key: 'cache-control',
