@@ -107,6 +107,7 @@ Load the website in your browser, and open the Chrome developer tools to underst
 * Enable Origin Shield
 * Reporting on usage.
 * Move static content to own bucket with appropriate caching behavior
+* Issue with redeploys (custom ressources)
 
 
 # Request flow
