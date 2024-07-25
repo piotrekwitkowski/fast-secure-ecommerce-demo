@@ -10,7 +10,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/*.mp4',
+        source: '/sales.mp4',
         headers: [
           {
             key: 'cache-control',
@@ -19,7 +19,7 @@ const nextConfig = {
         ],
       },
       {
-        source: '/*.svg',
+        source: '/logo.svg',
         headers: [
           {
             key: 'cache-control',
