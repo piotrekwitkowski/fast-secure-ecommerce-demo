@@ -21,7 +21,7 @@ As prerequisite, you need to have CDK installed ```npm install -g aws-cdk ``` an
 Note the generated CloudFront domain name, and the load balancer domain name, you will use them in the test scenarios.
 
 Current gotchas: 
-* Updating the stack will not update the web app installed on EC2. You will need to change the ASG resource name in CDK to force a new app deployment.
+* Updating the stack will not update the web app installed on EC2. You will need to terminate the EC2 instances in the ASG, allowing the ASG to launch new ones.
 * if you destroy the stack, you will need to manually remove the created WAF WebACL. Since a CloudFront WAF WebACL must be deployed in us-east-1, regardless of the region of the CDK stack, I had to create a custom resource to deploy it. The custom resource for the moment does not remove the WebACL resource automatically. Similary, if you update the WAF configuration in CDK, it wont be reflected in a new CDK deploy, for the same reasons.
 
 # Architecture
