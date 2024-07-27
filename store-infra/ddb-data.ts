@@ -22,3 +22,9 @@ export const defaultUser =
         address: { S: 'Marina, Dubai, UAE' },
         premium: { S: 'yes' },
     } as const;
+
+
+export const comments = [
+    { productid: 'bamboo-cutlery-set-9584', timestamp: 1722065698, username: 'Joud', text: 'I love this product'},
+    { productid: 'bamboo-cutlery-set-9584', timestamp: 1722000000, username: 'Achraf', text: 'Great quality price ratio ^^'},
+] as const;
