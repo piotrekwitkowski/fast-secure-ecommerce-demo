@@ -429,7 +429,7 @@ export class StoreInfraStack extends cdk.Stack {
           LockToken: wafLocktoken,
           Scope: 'CLOUDFRONT'
         },
-        physicalResourceId: PhysicalResourceId.of(`DeleteWAFWebACL${Date.now().toString()}`), 
+        physicalResourceId: PhysicalResourceId.of('DeleteWAFWebACL'), 
       },
       policy: AwsCustomResourcePolicy.fromSdkCalls({
         resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
@@ -596,6 +596,8 @@ export class StoreInfraStack extends cdk.Stack {
       },
 
     });
+
+    deleteWafCR.node.addDependency(cdn);
 
     // ADD OAC between CloudFront and LambdaURL
     const oac = new cloudfront.CfnOriginAccessControl(this, "OAC", {
