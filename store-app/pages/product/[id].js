@@ -8,9 +8,10 @@ import { useState, useEffect } from 'react';
 export default function Product({ product, comments }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [formData, setFormData] = useState({
-    comment: '',
-    pid: product.id,
+    text: '',
+    productid: product.id,
     username: '',
+    timestamp: 0,
   });
 
   const router = useRouter();
@@ -37,6 +38,7 @@ export default function Product({ product, comments }) {
 
     try {
       formData.username = getUsername();
+      formData.timestamp = Date.now();
       const response = await fetch('/api/comment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -95,7 +97,7 @@ export default function Product({ product, comments }) {
             <div className="bg-grey rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300 gap-6">
               <div className="p-4">
                 <h2 className="text-xl font-semibold mb-2">{comment.username}</h2>
-                <p className="text-gray-600 mb-4">{comment.comment}</p>
+                <p className="text-gray-600 mb-4">{comment.text}</p>
               </div>
             </div>
           ))}
@@ -110,9 +112,9 @@ export default function Product({ product, comments }) {
                     </label>
                     <textarea
                       className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                      id="comment"
-                      name="comment"
-                      value={formData.comment}
+                      id="text"
+                      name="text"
+                      value={formData.text}
                       onChange={handleChange}
                       required
                     ></textarea>
@@ -139,19 +141,16 @@ export default function Product({ product, comments }) {
 }
 
 export async function getServerSideProps({ params }) {
-  const res = await fetch(`http://localhost:3000/api/product?id=${params.id}`); //TODO
-  const product = await res.json();
+  const productPromise =  await fetch(`http://localhost:3000/api/product?id=${params.id}`); 
+  const commentsPromise = await fetch(`http://localhost:3000/api/comment?productId=${params.id}`); 
+  
+ // await Promise.all([productPromise, commentsPromise]);
 
-  const comments = [
-    {
-      "username": "big_fellow",
-      "comment": "awesome product!"
-    },
-    {
-      "username": "joud",
-      "comment": "good price foe the quality"
-    },
-  ]
+  //console.log(productPromise);
+
+  const product = await productPromise.json();
+
+  const comments = await commentsPromise.json();
 
   return {
     props: {
