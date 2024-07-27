@@ -102,13 +102,14 @@ Load the website in your browser, and open the Chrome developer tools to underst
 * GenAI search bar
 
 ## Infra code
+* Holistic review + comments
 * CSP header
 * Enforce origin cloaking at L7
-* Reporting on usage.
 * Move static content to own bucket with appropriate caching behavior
 * Automatically detect the repo git name
-* Allow the option for custom domain in CDK input parameters
 * Config file change to work with CDK output
+* Allow the option for custom domain in CDK input parameters
+
 
 # Request flow
 
