@@ -396,11 +396,9 @@ export class StoreInfraStack extends cdk.Stack {
       resourceArn: webAclARN 
     });
 
-    //TODO delete / update webcl 
-
     // Get the url used for the Client side javascript integration
     const wafWebaclIntegrationURLCR = new AwsCustomResource(this, 'WAFWebACLproperties', {
-      onCreate: {
+      onUpdate: {
         service: 'WAFv2',
         action: 'GetWebACL',
         region: 'us-east-1',
@@ -409,14 +407,34 @@ export class StoreInfraStack extends cdk.Stack {
           Name: webACLName,
           Scope: 'CLOUDFRONT'
         },
-        outputPaths: ['ApplicationIntegrationURL'],
-        physicalResourceId: PhysicalResourceId.of('WAFWebACLproperties'),
+        outputPaths: ['ApplicationIntegrationURL', 'LockToken'],
+        physicalResourceId: PhysicalResourceId.of(`WAFWebACLproperties${Date.now().toString()}`), 
       },
       policy: AwsCustomResourcePolicy.fromSdkCalls({
         resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
       }),
     });
     const wafIntegrationURL = wafWebaclIntegrationURLCR.getResponseField('ApplicationIntegrationURL');
+    const wafLocktoken = wafWebaclIntegrationURLCR.getResponseField('LockToken');
+
+    // create a custom resoruce to delete WAFWebaCL
+    const deleteWafCR = new AwsCustomResource(this, 'DeleteWAFWebACL', {
+      onDelete: {
+        service: 'WAFv2',
+        action: 'DeleteWebACL',
+        region: 'us-east-1',
+        parameters: {
+          Id: webAclID,
+          Name: webACLName,
+          LockToken: wafLocktoken,
+          Scope: 'CLOUDFRONT'
+        },
+        physicalResourceId: PhysicalResourceId.of(`DeleteWAFWebACL${Date.now().toString()}`), 
+      },
+      policy: AwsCustomResourcePolicy.fromSdkCalls({
+        resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
+      }),
+    });
 
     // get the paramters of the RUM script tag
     const rumParameters = new AwsCustomResource(this, 'RumParameters', {
