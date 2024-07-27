@@ -374,6 +374,7 @@ export class StoreInfraStack extends cdk.Stack {
     });
     const webAclID = wafWebaclCreateCR.getResponseField('Summary.Id');
     const webAclARN = wafWebaclCreateCR.getResponseField('Summary.ARN');
+  
 
     const webAclLogGroup = new logs.LogGroup(this, "awsWafLogs", {
       logGroupName: 'aws-waf-logs-recycle-bin',
@@ -477,7 +478,7 @@ export class StoreInfraStack extends cdk.Stack {
       functionName: `htmlRulesRespCFF${this.node.addr}`,
       runtime: cloudfront.FunctionRuntime.JS_2_0,
     });
-    const originShieldRegion = getOriginShieldRegion(cdk.Aws.REGION);
+    const originShieldRegion = getOriginShieldRegion(process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1');
 
     const backendOrigin = new cforigins.HttpOrigin(alb.loadBalancerDnsName, {
       protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
