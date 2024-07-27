@@ -97,24 +97,20 @@ Load the website in your browser, and open the Chrome developer tools to underst
 
 ## App code
 * Refactor nextjs app code (state, router, storage, apis)
-* Complete comments functionality with backend
-* Make index-v2 functional
-* Expand ont he registration data (First and Last name)
+* Add more registration data (e.g. First and Last name)
+* Preview display in social networks
 * GenAI search bar
-* Config file change
-* SEO optimization
 
 ## Infra code
 * CSP header
 * Custom resource lifecycle management and permissions
+* Issue with redeploys (custom ressources)
 * Enforce origin cloaking at L7
-* Enable Origin Shield
 * Reporting on usage.
 * Move static content to own bucket with appropriate caching behavior
-* Issue with redeploys (custom ressources)
-* Change the file structure of the project
 * Automatically detect the repo git name
 * Allow the option for custom domain in CDK input parameters
+* Config file change to work with CDK output
 
 # Request flow
 
