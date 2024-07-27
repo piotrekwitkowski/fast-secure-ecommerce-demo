@@ -22,7 +22,7 @@ Note the generated CloudFront domain name, and the load balancer domain name, yo
 
 Current gotchas: 
 * Updating the stack will not update the web app installed on EC2. You will need to terminate the EC2 instances in the ASG, allowing the ASG to launch new ones.
-* if you destroy the stack, you will need to manually remove the created WAF WebACL. Since a CloudFront WAF WebACL must be deployed in us-east-1, regardless of the region of the CDK stack, I had to create a custom resource to deploy it. The custom resource for the moment does not remove the WebACL resource automatically. Similary, if you update the WAF configuration in CDK, it wont be reflected in a new CDK deploy, for the same reasons.
+*  Since a CloudFront WAF WebACL must be deployed in us-east-1, regardless of the region of the CDK stack, I had to create a custom resource to deploy it. If you update the WAF configuration in CDK, it wont be reflected in a new CDK deploy, for the same reasons.
 
 # Architecture
 
@@ -91,9 +91,9 @@ Load the website in your browser, and open the Chrome developer tools to underst
 # Future work
 
 ## Scenarios  
+* Key management in CFF for waiting room
 * Add Server timing headers to RUM
 * Add an observability option for CloudFront: CloudWatch or real time logs.
-* Key management in CFF for waiting room
 
 ## App code
 * Refactor nextjs app code (state, router, storage, apis)
@@ -103,8 +103,6 @@ Load the website in your browser, and open the Chrome developer tools to underst
 
 ## Infra code
 * CSP header
-* Custom resource lifecycle management and permissions
-* Issue with redeploys (custom ressources)
 * Enforce origin cloaking at L7
 * Reporting on usage.
 * Move static content to own bucket with appropriate caching behavior
