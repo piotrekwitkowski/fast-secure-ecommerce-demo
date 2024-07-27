@@ -605,7 +605,6 @@ export class StoreInfraStack extends cdk.Stack {
 
     });
 
-    //deleteWafCR.node.addDependency(cdn);
     cdn.node.addDependency(deleteWafCR);
 
     // ADD OAC between CloudFront and LambdaURL
