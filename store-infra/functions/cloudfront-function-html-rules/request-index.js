@@ -114,7 +114,6 @@ async function handler(event) {
         {
             "rules": {
                 "waitroom" : { 
-                    "secretKey": "1c56896084b4fc03729698c552763489",
                     "location" : "/waitroom"
                 }
             }
@@ -134,11 +133,12 @@ async function handler(event) {
                         statusDescription: 'Found',
                         headers: { location: { value: config.rules.redirect} },
                     }
-                } else if ((config.rules.waitroom) && (config.rules.waitroom.secretKey) && (config.rules.waitroom.location)) {
+                } else if ((config.rules.waitroom) && (config.rules.waitroom.location)) {
                     var waitroom = true;
                     if (request.cookies['token']) {
                         try { 
-                            const payload = jwt_decode(request.cookies['token'].value, config.rules.waitroom.secretKey);
+                            const secretKey = await kvsHandle.get('_secretkey');
+                            const payload = jwt_decode(request.cookies['token'].value, secretKey);
                             if ((payload.premium) && (payload.premium === "yes")) waitroom = false;
                         } catch(e) {
                             console.log(e);
