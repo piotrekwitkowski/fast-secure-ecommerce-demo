@@ -16,9 +16,10 @@ import * as waf from 'aws-cdk-lib/aws-wafv2';
 import { AwsCustomResource, PhysicalResourceId, AwsCustomResourcePolicy } from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 import { createHash } from 'crypto';
-import { products, defaultUser } from '../ddb-data';
-import { wafRules } from '../waf-rules';
-import { stackConfig } from '../stack-config';
+import { products, defaultUser, comments } from './ddb-data';
+import { wafRules } from './waf-rules';
+import { stackConfig } from './stack-config';
+import { getOriginShieldRegion } from './originshield';
 
 
 export class StoreInfraStack extends cdk.Stack {
@@ -44,8 +45,20 @@ export class StoreInfraStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     })
 
+    const commentsTable = new dynamodb.Table(this, "commentsTable", {
+      partitionKey: {
+        name: "productid",
+        type: dynamodb.AttributeType.STRING
+      },
+      sortKey: { 
+        name: 'timestamp', 
+        type: dynamodb.AttributeType.NUMBER 
+      },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    })
+
     // fill tables with initial data
-    new AwsCustomResource(this, 'initDDBresource', {
+    new AwsCustomResource(this, 'fillDbTableData', {
       onCreate: {
         service: 'DynamoDB',
         action: 'BatchWriteItem',
@@ -62,17 +75,26 @@ export class StoreInfraStack extends cdk.Stack {
                 }
               }
             })),
+            [commentsTable.tableName]: comments.map(comment => ({
+              PutRequest: {
+                Item: {
+                  productid: { S: comment.productid },
+                  timestamp: { N:  `${comment.timestamp}` },
+                  username: { S: comment.username },
+                  text: { S: comment.text },
+                }
+              }
+            })),
             [usersTable.tableName]: [
               {
                 PutRequest: {
                   Item: defaultUser,
                 }
               }
-
             ]
           }
         },
-        physicalResourceId: PhysicalResourceId.of('initDDBresource'),
+        physicalResourceId: PhysicalResourceId.of('fillDbTableData'),
       },
       policy: AwsCustomResourcePolicy.fromSdkCalls({
         resources: AwsCustomResourcePolicy.ANY_RESOURCE, //TODO make it more restrictive
@@ -287,9 +309,10 @@ export class StoreInfraStack extends cdk.Stack {
     });
     productsTable.grantReadWriteData(role);
     usersTable.grantReadWriteData(role);
+    commentsTable.grantReadWriteData(role);
 
     // Create Autoscaling group
-    const asg = new autoscaling.AutoScalingGroup(this, 'ASG', {
+    const asg = new autoscaling.AutoScalingGroup(this, 'scalingGroup', {
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.SMALL),
       machineImage: ec2.MachineImage.latestAmazonLinux2023(),
       vpc,
@@ -411,7 +434,7 @@ export class StoreInfraStack extends cdk.Stack {
     const rumMonitorId = rumParameters.getResponseField('AppMonitor.Id');
     const rumMonitorIdentityPoolId = rumParameters.getResponseField('AppMonitor.AppMonitorConfiguration.IdentityPoolId');
 
-    const aws_config = `{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}","login_secret_key": "${secretKey}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js", "rumMonitorId": "${rumMonitorId}", "rumMonitorIdentityPoolId": "${rumMonitorIdentityPoolId}"}`;
+    const aws_config = `{"products_ddb_table" : "${productsTable.tableName}", "users_ddb_table": "${usersTable.tableName}", "comments_ddb_table": "${commentsTable.tableName}","login_secret_key": "${secretKey}","aws_region": "${this.region}", "waf_url": "${wafIntegrationURL}challenge.compact.js", "rumMonitorId": "${rumMonitorId}", "rumMonitorIdentityPoolId": "${rumMonitorIdentityPoolId}"}`;
 
     // Script to bootstrap the Nextjs app on EC2
     asg.addUserData(
@@ -454,9 +477,12 @@ export class StoreInfraStack extends cdk.Stack {
       functionName: `htmlRulesRespCFF${this.node.addr}`,
       runtime: cloudfront.FunctionRuntime.JS_2_0,
     });
+    const originShieldRegion = getOriginShieldRegion(cdk.Aws.REGION);
 
     const backendOrigin = new cforigins.HttpOrigin(alb.loadBalancerDnsName, {
       protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+      originShieldEnabled: true,
+      originShieldRegion: originShieldRegion,
     });
 
     const responseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, 'ResponseHeadersPolicy', {
@@ -520,8 +546,14 @@ export class StoreInfraStack extends cdk.Stack {
         },
         '/images/*': {
           origin: new cforigins.OriginGroup({
-            primaryOrigin: new cforigins.S3Origin(transformedImageBucket),
-            fallbackOrigin: new cforigins.HttpOrigin(imageProcessingDomainName),
+            primaryOrigin: new cforigins.S3Origin(transformedImageBucket, {
+              originShieldEnabled: true,
+              originShieldRegion: originShieldRegion,
+            }),
+            fallbackOrigin: new cforigins.HttpOrigin(imageProcessingDomainName, {
+              originShieldEnabled: true,
+              originShieldRegion: originShieldRegion,
+            }),
             fallbackStatusCodes: [403, 500, 503, 504],
           }),
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
