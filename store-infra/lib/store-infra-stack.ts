@@ -476,8 +476,16 @@ export class StoreInfraStack extends cdk.Stack {
     // Create a CloudFront distribution TODO add security headers
 
     // Create KeyValueStore that will store the engine rules
-    const kvs = new cloudfront.KeyValueStore(this, 'KeyValueStore', {
-      keyValueStoreName: 'html-rules-kvs',
+    const kvs = new cloudfront.KeyValueStore(this, 'HtmlKeyValueStore', {
+      keyValueStoreName: 'kvs-html-rules',
+      source: cloudfront.ImportSource.fromInline(JSON.stringify({
+        data: [
+          {
+            key: "_secretkey",
+            value: secretKey,
+          }
+        ],
+      })),
     });
 
     // Replace KVS id in the CloudFront Function code, then minify the code
@@ -597,6 +605,7 @@ export class StoreInfraStack extends cdk.Stack {
 
     });
 
+    //deleteWafCR.node.addDependency(cdn);
     cdn.node.addDependency(deleteWafCR);
 
     // ADD OAC between CloudFront and LambdaURL
