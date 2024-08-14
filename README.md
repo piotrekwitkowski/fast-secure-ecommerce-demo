@@ -93,6 +93,7 @@ Load the website in your browser, and open the Chrome developer tools to underst
 ## Scenarios  
 * Add Server timing headers to RUM
 * Add an observability option for CloudFront: CloudWatch or real time logs.
+* API using Lambda + OAC
 
 ## App code
 * Refactor nextjs app code (state, router, storage, apis)
