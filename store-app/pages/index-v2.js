@@ -1,27 +1,28 @@
-import Layout from './components/Layout';
 import Link from 'next/link';
 import Image from 'next/image';
 import Script from 'next/script';
-import { addItem } from '../utils/cart';
-import { useRouter } from 'next/router';
-import { isLoggedIn } from '../utils/auth';
 import { useState, useEffect } from 'react';
 
-export default function Home({ products }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const router = useRouter();
+import Layout from './components/Layout';
+import { getProducts } from '../lib/ddb';
+import { getUsername } from '../lib/auth';
+import { addCartItem } from '../lib/client-side-helper';
+
+export default function Home({ products, username }) {
+  const [cartAction, setCartAction] = useState(0);
 
   useEffect(() => {
-    setIsAuthenticated(isLoggedIn());
-  }, []);
 
-  function addItemToCart(id, price) {
-    addItem(id, price);
-    router.reload();
+  }, [cartAction]);
+
+
+  function addItemToCart(product) {
+    addCartItem(product);
+    setCartAction(cartAction + 1); // render again
   }
 
   return (
-    <Layout>
+    <Layout username={username}>
       <Script type="speculationrules" id="speculationAPI" dangerouslySetInnerHTML={{
         __html: JSON.stringify({
           "prerender": [
@@ -57,15 +58,14 @@ export default function Home({ products }) {
   );
 }
 
-export async function getServerSideProps() {
-
-  const res = await fetch('http://localhost:3000/api/products'); //TODO
-
-  const products = await res.json();
+export async function getServerSideProps({ req }) {
+  const products = await getProducts();
+  const username = getUsername(req);
 
   return {
     props: {
-      products,
+      products, username
     },
   };
+
 }

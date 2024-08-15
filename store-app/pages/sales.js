@@ -1,8 +1,9 @@
 import Layout from './components/Layout';
+import { getUsername } from '../lib/auth';
 
-export default function Sales({ }) {
+export default function Sales({ username }) {
     return (
-        <Layout>
+        <Layout username={username}>
             <div className="container mx-auto p-4 bg-gray-100 min-h-screen">
                 <main className="flex flex-col items-center space-y-6">
                     <h1 className="text-3xl font-bold text-green-600">50% discount this week</h1>
@@ -24,4 +25,13 @@ export default function Sales({ }) {
             </div>
         </Layout>
     );
+}
+
+export async function getServerSideProps({ req }) {
+    const username = getUsername(req);
+    return {
+        props: {
+            username
+        },
+    };
 }

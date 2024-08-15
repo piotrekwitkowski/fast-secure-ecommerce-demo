@@ -1,12 +1,14 @@
-import Layout from './components/Layout';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { login } from '../utils/auth';
 
-export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+import { getUsername } from '../lib/auth';
+import { login } from '../lib/client-side-helper';
+import Layout from './components/Layout';
+
+export default function Login({ username }) {
+  const [formUsername, setFormUsername] = useState('');
+  const [formPassword, setFormPassword] = useState('');
   const router = useRouter();
 
   const handleSubmit = async (e) => {
@@ -17,7 +19,7 @@ export default function Login() {
     }
 
     // Basic form validation
-    if (!username || !password) {
+    if (!formUsername || !formPassword) {
       setError('Please enter both username and password');
       return;
     }
@@ -26,13 +28,13 @@ export default function Login() {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username: formUsername, password: formPassword }),
       });
-      
+
       if (response.ok) {
         // Login successful
         const data = await response.json();
-        login(username, data.token)
+        login(data.token)
         router.push('/'); // Redirect to home page
       } else {
         // Login failed
@@ -45,7 +47,7 @@ export default function Login() {
           const data = await response.json();
           setError(data.message || 'Login failed');
         }
-        
+
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -54,7 +56,7 @@ export default function Login() {
   };
 
   return (
-    <Layout>
+    <Layout username={username}>
       <div className="max-w-md mx-auto">
         <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
           <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
@@ -66,8 +68,8 @@ export default function Login() {
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               id="username"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={formUsername}
+              onChange={(e) => setFormUsername(e.target.value)}
               placeholder="Username"
               required
             />
@@ -80,8 +82,8 @@ export default function Login() {
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
               id="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formPassword}
+              onChange={(e) => setFormPassword(e.target.value)}
               placeholder="******************"
               required
             />
@@ -95,12 +97,21 @@ export default function Login() {
             </button>
           </div>
           <div className="flex items-center justify-between">
-              <Link href={`/register`} className="py-2 px-2 font-small text-blue-500">Sign up here, if you do not have an account</Link>
+            <Link href={`/register`} className="py-2 px-2 font-small text-blue-500">Sign up here, if you do not have an account</Link>
           </div>
 
         </form>
-        <div id='error' className="flex items-center justify-between text-red-500"/>
+        <div id='error' className="flex items-center justify-between text-red-500" />
       </div>
     </Layout>
   );
+}
+
+export async function getServerSideProps({ req }) {
+  const username = getUsername(req);
+  return {
+    props: {
+      username
+    },
+  };
 }

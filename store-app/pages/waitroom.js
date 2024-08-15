@@ -1,9 +1,10 @@
 
 import Layout from './components/Layout';
+import { getUsername } from '../lib/auth';
 
-export default function Waitroom({ }) {
+export default function Waitroom({ username }) {
     return (
-        <Layout>
+        <Layout username={username}>
             <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
                 <div className="flex items-center p-6 rounded-lg ">
                     <div>
@@ -14,4 +15,13 @@ export default function Waitroom({ }) {
             </div>
         </Layout>
     );
+}
+
+export async function getServerSideProps({ req }) {
+    const username = getUsername(req);
+    return {
+        props: {
+            username
+        },
+    };
 }

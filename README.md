@@ -96,7 +96,6 @@ Load the website in your browser, and open the Chrome developer tools to underst
 * API using Lambda + OAC
 
 ## App code
-* Refactor nextjs app code (state, router, storage, apis)
 * Add more registration data (e.g. First and Last name)
 * Preview display in social networks
 * GenAI search bar

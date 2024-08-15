@@ -1,10 +1,11 @@
 
 import Layout from './components/Layout';
+import { getUsername } from '../lib/auth';
 
-function Error({ statusCode }) {
+function Error({ statusCode, username }) {
     if (statusCode === 404) {
         return (
-            <Layout>
+            <Layout username={username}>
                 <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
                     <div className="flex items-center p-6 rounded-lg ">
      
@@ -25,9 +26,10 @@ function Error({ statusCode }) {
     )
 }
 
-Error.getInitialProps = ({ res, err }) => {
+Error.getInitialProps = ({ res, req, err }) => {
+    const username = getUsername(req);
     const statusCode = res ? res.statusCode : err ? err.statusCode : 404
-    return { statusCode }
+    return { statusCode, username }
 }
 
 export default Error

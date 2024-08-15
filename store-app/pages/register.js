@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import Layout from './components/Layout';
 
-export default function Register() {
+import Layout from './components/Layout';
+import { getUsername } from '../lib/auth';
+
+export default function Register({ username }) {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -58,7 +60,7 @@ export default function Register() {
   };
 
   return (
-    <Layout>
+    <Layout username={username}>
       <div className="max-w-md mx-auto">
         <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
           <h1 className="text-2xl font-bold mb-6 text-center">Register</h1>
@@ -146,4 +148,13 @@ export default function Register() {
       </div>
     </Layout>
   );
+}
+
+export async function getServerSideProps({ req }) {
+  const username = getUsername(req);
+  return {
+    props: {
+      username
+    },
+  };
 }

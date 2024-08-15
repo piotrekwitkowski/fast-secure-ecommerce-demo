@@ -1,32 +1,36 @@
-import Layout from './../components/Layout';
+
 import Image from 'next/image'
-import { addItem } from '../../utils/cart';
-import { useRouter } from 'next/router';
-import { isLoggedIn, getUsername } from '../../utils/auth';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
-export default function Product({ product, comments }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [formData, setFormData] = useState({
-    text: '',
-    productid: product.id,
-    username: '',
-    timestamp: 0,
-  });
+import Layout from './../components/Layout';
+import { getProduct, getComments } from '../../lib/ddb';
+import { getUsername } from '../../lib/auth';
+import { addCartItem } from '../../lib/client-side-helper';
 
+export default function Product({ product, comments, username }) {
   const router = useRouter();
 
-  if (router.isFallback) {
-    return <div>Loading...</div>;
+  if (!product) {
+    return (<Layout username={username}><div className="text-red-500">Sorry I could not load the product, try again!</div></Layout>)
   }
 
-  useEffect(() => {
-    setIsAuthenticated(isLoggedIn());
-  }, []);
+  const [isLoggedin, setIsLoggedin] = useState(username ? true : false);
+  const [cartAction, setCartAction] = useState(0);
+  const [formComment, setFormComment] = useState({
+    text: '',
+    productid: product.id,
+    username: username,
+  });
 
-  function addItemToCart(id, price) {
-    addItem(id, price);
-    router.push('/');
+  useEffect(() => {
+
+  }, [router, cartAction]);
+
+
+  function addItemToCart(product) {
+    addCartItem(product);
+    setCartAction(cartAction + 1); // render again
   }
 
   const handleSubmit = async (e) => {
@@ -37,18 +41,16 @@ export default function Product({ product, comments }) {
     }
 
     try {
-      formData.username = getUsername();
-      formData.timestamp = Date.now();
       const response = await fetch('/api/comment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formComment),
       });
-      
+
 
       if (response.ok) {
-        //router.reload(); // reload the page
         document.getElementById("submit").innerHTML = "Comment submmitted, thank you!";
+        // router.reload(); TODO instead load comments on client side
       } else {
         // Registration failed
         if ((response.status === 405) || (response.status === 202)) {
@@ -60,27 +62,26 @@ export default function Product({ product, comments }) {
           const data = await response.json();
           setError(data.message || 'posting comment failed');
         }
-        
+
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
-      console.log('Registration error:', err);
+      console.log('error adding comment:', err);
     }
 
   }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prevState => ({
+    setFormComment(prevState => ({
       ...prevState,
       [name]: value
     }));
   };
 
 
-
   return (
-    <Layout>
+    <Layout username={username}>
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="p-6">
           <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
@@ -101,7 +102,7 @@ export default function Product({ product, comments }) {
               </div>
             </div>
           ))}
-          {isAuthenticated ?
+          {isLoggedin ?
             (
               <div id='submit' className="p-6">
                 <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
@@ -114,7 +115,7 @@ export default function Product({ product, comments }) {
                       className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                       id="text"
                       name="text"
-                      value={formData.text}
+                      value={formComment.text}
                       onChange={handleChange}
                       required
                     ></textarea>
@@ -129,7 +130,7 @@ export default function Product({ product, comments }) {
                   </div>
 
                 </form>
-                <div id='error' className="flex items-center justify-between text-red-500"/>
+                <div id='error' className="flex items-center justify-between text-red-500" />
               </div>
             ) : (
               <p className="text-gray-600 mb-4"><br></br>Login to add comments</p>
@@ -140,21 +141,15 @@ export default function Product({ product, comments }) {
   );
 }
 
-export async function getServerSideProps({ params }) {
-  const productPromise =  await fetch(`http://localhost:3000/api/product?id=${params.id}`); 
-  const commentsPromise = await fetch(`http://localhost:3000/api/comment?productId=${params.id}`); 
-  
- // await Promise.all([productPromise, commentsPromise]);
+export async function getServerSideProps({ params, req }) {
+  const username = getUsername(req);
 
-  //console.log(productPromise);
-
-  const product = await productPromise.json();
-
-  const comments = await commentsPromise.json();
+  let product, comments;
+  [product, comments] = await Promise.all([getProduct(params.id), getComments(params.id)])
 
   return {
     props: {
-      product, comments
+      product, comments, username
     },
   };
 }
