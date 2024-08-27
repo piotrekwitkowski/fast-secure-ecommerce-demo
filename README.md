@@ -108,7 +108,7 @@ Load the website in your browser, and open the Chrome developer tools to underst
 * Automatically detect the repo git name
 * Config file change to work with CDK output
 * Allow the option for custom domain in CDK input parameters
-
+* Remove KVS id rewrite following https://www.linkedin.com/feed/update/urn:li:activity:7234016780552175616/
 
 # Request flow
 
