@@ -466,7 +466,7 @@ export class StoreInfraStack extends cdk.Stack {
       'yum -y install git',
       'npm install -g pm2',
       `git clone ${stackConfig.GITHUB_REPO}`,
-      'cd /recycle-bin-boutique/store-app',
+      'cd /fast-secure-ecommerce-demo/store-app',
       `echo '${aws_config}' > aws-backend-config.json`,
       'npm install',
       'npm run build',
