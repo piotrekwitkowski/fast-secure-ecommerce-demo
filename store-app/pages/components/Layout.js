@@ -24,8 +24,8 @@ export default function Layout({ children, username }) {
             <div className="flex space-x-7">
               <div>
                 <Link href="/" className="flex items-center py-4 px-2">
-                  <img src="/logo.svg" alt="Store Logo" width={30} height={30} />
-                  <div className="font-semibold text-gray-500 text-lg">Recycle Bin Boutique</div>
+                  {/* <img src="/square.svg" alt="Store Logo" width={30} height={30} /> */}
+                  <div className="font-semibold text-gray-500 text-lg">fast-secure-ecommerce-demo</div>
                 </Link>
               </div>
             </div>

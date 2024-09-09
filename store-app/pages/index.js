@@ -27,7 +27,7 @@ export default function Home({ products, username }) {
             products.map((product) => (
               <Link href={`/product/${product.id}`} key={product.id}>
                 <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
-                  <Image src={product.image} alt={product.name} className="w-full h-400 object-cover" width={200} height={200} loading="lazy" />
+                  <Image src={product.image} alt={product.name} className="w-full h-60 object-cover" width={200} height={200} loading="lazy" />
                   <div className="p-4">
                     <h2 className="text-xl font-semibold mb-2">{product.name}</h2>
                     <p className="text-gray-600 mb-4">{product.description.substring(0, 60)}...</p>

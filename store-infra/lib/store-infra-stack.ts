@@ -514,7 +514,7 @@ export class StoreInfraStack extends cdk.Stack {
 
     const responseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, 'ResponseHeadersPolicy', {
       responseHeadersPolicyName: 'RecycleBinBoutiqueRHP',
-      comment: 'A default policy for the Recycle Bin Boutique',
+      comment: 'A default policy for the fast-secure-ecommerce-demo',
       securityHeadersBehavior: {
         // contentSecurityPolicy: { contentSecurityPolicy: 'default-src https:;', override: true }, TBD
         contentTypeOptions: { override: true },
@@ -527,7 +527,7 @@ export class StoreInfraStack extends cdk.Stack {
     });
 
     const cdn = new cloudfront.Distribution(this, 'store-cdn', {
-      comment: 'CloudFront to serve the Recycle Bin Boutique',
+      comment: 'CloudFront to serve the fast-secure-ecommerce-demo',
       webAclId: webAclARN,
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       publishAdditionalMetrics: true,
@@ -650,7 +650,7 @@ export class StoreInfraStack extends cdk.Stack {
 
     // Output cloudfront domain name
     new cdk.CfnOutput(this, 'CloudFrontDomainName', {
-      description: 'CloudFront domain name of the Recycle Bin Boutique',
+      description: 'CloudFront domain name of the fast-secure-ecommerce-demo',
       value: cdn.distributionDomainName
     });
 
@@ -660,8 +660,12 @@ export class StoreInfraStack extends cdk.Stack {
       value: alb.loadBalancerDnsName
     });
 
+    new cdk.CfnOutput(this, 'comments_ddb_table', {
+      description: 'ddb comments table',
+      value: commentsTable.tableName
+    });
     new cdk.CfnOutput(this, 'products_ddb_table', {
-      description: 'ddb product table',
+      description: 'ddb products table',
       value: productsTable.tableName
     });
     new cdk.CfnOutput(this, 'users_ddb_table', {

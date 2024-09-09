@@ -128,3 +128,10 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+.DS_Store
+aws-backend-config.json
+cdk.out/
+
+# eventually remove this line and track the lock file
+package-lock.json

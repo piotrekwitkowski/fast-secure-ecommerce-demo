@@ -68,7 +68,6 @@ export default function Product({ product, comments, username }) {
       setError('An error occurred. Please try again.');
       console.log('error adding comment:', err);
     }
-
   }
 
   const handleChange = (e) => {
@@ -78,7 +77,6 @@ export default function Product({ product, comments, username }) {
       [name]: value
     }));
   };
-
 
   return (
     <Layout username={username}>
