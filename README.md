@@ -94,6 +94,7 @@ Load the website in your browser, and open the Chrome developer tools to underst
 * Add Server timing headers to RUM
 * Add an observability option for CloudFront: CloudWatch or real time logs.
 * API using Lambda + OAC
+* Test https://github.com/jsdom/jsdom
 
 ## App code
 * Add more registration data (e.g. First and Last name)
